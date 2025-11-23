@@ -1,6 +1,7 @@
 """
 Thanks to https://github.com/fperazzi/davis
 """
+from math import floor
 import numpy as np
 from skimage.morphology import binary_dilation,disk
 
@@ -13,6 +14,16 @@ def db_eval_boundary(foreground_mask, gt_mask, bound_th=0.008):
         P (float): boundaries precision
         R (float): boundaries recall
         F (float): boundaries F-measure
+    """
+
+    """
+    Se bound_th >= 1: É um valor absoluto em pixels
+
+    Exemplo: bound_th = 5 → usa diretamente 5 pixels de tolerância
+    bound_pix = bound_th (5 pixels)
+    Se bound_th < 1: É uma fração relativa ao tamanho da imagem
+    Exemplo: bound_th = 0.008 (valor padrão)
+    bound_pix = ceil(0.008 * sqrt(im_width^2 + im_height^2))
     """
     assert np.atleast_3d(foreground_mask).shape[2] == 1
     bound_pix = bound_th if bound_th >= 1 else \
@@ -84,9 +95,9 @@ def seg2bmap(seg,width=None,height=None):
     s  = np.zeros_like(seg)
     se = np.zeros_like(seg)
 
-    e[:,:-1]    = seg[:,1:]
-    s[:-1,:]    = seg[1:,:]
-    se[:-1,:-1] = seg[1:,1:]
+    e[:,:-1]    = seg[:,1:]     # desloca 1 coluna de pixeis para a ESQUERDA
+    s[:-1,:]    = seg[1:,:]     # desloca 1 linha de pixeis para CIMA
+    se[:-1,:-1] = seg[1:,1:]    # desloca ESQUERDA e CIMA (diagonal)
 
     b        = seg^e | seg^s | seg^se
     b[-1,:]  = seg[-1,:]^e[-1,:]
@@ -100,8 +111,8 @@ def seg2bmap(seg,width=None,height=None):
         for x in range(w):
             for y in range(h):
                 if b[y,x]:
-                    j = 1+floor((y-1)+height / h)
-                    i = 1+floor((x-1)+width  / h)
+                    j = floor(y * height / h)
+                    i = floor(x * width / w)
                     bmap[j,i] = 1;
     return bmap
 

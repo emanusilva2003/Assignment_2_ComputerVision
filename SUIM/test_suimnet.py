@@ -11,25 +11,27 @@ from PIL import Image
 from os.path import join, exists
 # local libs
 from models.suim_net import SUIM_Net
-from utils.data_utils import getPaths
+from utils.data_utils import getPaths, binaryMasksToRGB
 
 ## experiment directories
 #test_dir = "/mnt/data1/ImageSeg/suim/TEST/images/"
-test_dir = "data/test/images/"
+test_dir = "SUIM/TEST/images/"
 
 ## sample and ckpt dir
-samples_dir = "data/test/output/"
+samples_dir = "SUIM/TEST/output/"
 RO_dir = samples_dir + "RO/"
 FB_dir = samples_dir + "FV/"
 WR_dir = samples_dir + "WR/"
 HD_dir = samples_dir + "HD/"
-RI_dir = samples_dir + "RI/" 
+RI_dir = samples_dir + "RI/"
+RGB_dir = samples_dir + "RGB/"
 if not exists(samples_dir): os.makedirs(samples_dir)
 if not exists(RO_dir): os.makedirs(RO_dir)
 if not exists(FB_dir): os.makedirs(FB_dir)
 if not exists(WR_dir): os.makedirs(WR_dir)
 if not exists(HD_dir): os.makedirs(HD_dir)
 if not exists(RI_dir): os.makedirs(RI_dir)
+if not exists(RGB_dir): os.makedirs(RGB_dir)
 
 ## input/output shapes
 base_ = 'VGG' # or 'RSB'
@@ -42,7 +44,7 @@ else:
 suimnet = SUIM_Net(base=base_, im_res=im_res_, n_classes=5)
 model = suimnet.model
 print (model.summary())
-model.load_weights(join("ckpt/saved/", ckpt_name))
+model.load_weights(join("SUIM/ckpt/", ckpt_name))
 
 
 im_h, im_w = im_res_[1], im_res_[0]
@@ -74,6 +76,10 @@ def testGenerator():
         Image.fromarray(np.uint8(HDs*255.)).save(HD_dir+img_name)
         Image.fromarray(np.uint8(RIs*255.)).save(RI_dir+img_name)
         Image.fromarray(np.uint8(WRs*255.)).save(WR_dir+img_name)
+        
+        # Create and save RGB combined mask
+        rgb_mask = binaryMasksToRGB(ROs, FVs, HDs, RIs, WRs)
+        Image.fromarray(rgb_mask).save(RGB_dir+img_name)
 
 # test images
 testGenerator()
