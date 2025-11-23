@@ -174,6 +174,35 @@ def getPaths(data_dir):
                 if (fnmatch.fnmatch(filename, pattern)):
                     fname_ = os.path.join(d,filename)
                     image_paths.append(fname_)
-    return image_paths
+    return sorted(list(set(image_paths)))
+
+
+def binaryMasksToRGB(RO, FV, HD, RI, WR):
+    """
+    Convert 5 binary masks to a single RGB image using the SUIM color encoding:
+    RO (Robots) - Red (255, 0, 0)
+    FV (Fish/vertebrates) - Yellow (255, 255, 0)
+    HD (Human divers) - Blue (0, 0, 255)
+    RI (Reefs/invertebrates) - Magenta (255, 0, 255)
+    WR (Wrecks/ruins) - Cyan (0, 255, 255)
+    Background - Black (0, 0, 0)
+    """
+    h, w = RO.shape
+    rgb_mask = np.zeros((h, w, 3), dtype=np.uint8)
+    
+    # Apply colors with priority (later ones override earlier ones where they overlap)
+    # RO - Red
+    rgb_mask[RO > 0] = [255, 0, 0]
+    # FV - Yellow
+    rgb_mask[FV > 0] = [255, 255, 0]
+    # HD - Blue
+    rgb_mask[HD > 0] = [0, 0, 255]
+    # RI - Magenta
+    rgb_mask[RI > 0] = [255, 0, 255]
+    # WR - Cyan
+    rgb_mask[WR > 0] = [0, 255, 255]
+    
+    return rgb_mask
+
 
 
