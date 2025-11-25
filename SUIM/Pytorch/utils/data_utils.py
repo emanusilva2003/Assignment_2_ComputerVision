@@ -13,9 +13,9 @@ import torchvision.transforms.functional as TF
 import random
 
 """
-RGB color code and object categories:
+RGB color code and object categories:    Cada pixel da máscara é uma cor RGB, mas aqui os canais são 0 ou 1
 ------------------------------------
-000 BW: Background waterbody
+000 BW: Background waterbody               
 001 HD: Human divers
 010 PF: Plants/sea-grass
 011 WR: Wrecks/ruins
@@ -39,15 +39,15 @@ def getRobotFishHumanReefWrecks(mask):
     
     for i in range(imw):
         for j in range(imh):
-            if mask[i,j,0]==0 and mask[i,j,1]==0 and mask[i,j,2]==1:
+            if mask[i,j,0]==0 and mask[i,j,1]==0 and mask[i,j,2]==1:       # Green
                 Human[i, j] = 1.0
-            elif mask[i,j,0]==1 and mask[i,j,1]==0 and mask[i,j,2]==0:
+            elif mask[i,j,0]==1 and mask[i,j,1]==0 and mask[i,j,2]==0:     # Red
                 Robot[i, j] = 1.0
-            elif mask[i,j,0]==1 and mask[i,j,1]==1 and mask[i,j,2]==0:
+            elif mask[i,j,0]==1 and mask[i,j,1]==1 and mask[i,j,2]==0:    # Yellow
                 Fish[i, j] = 1.0
-            elif mask[i,j,0]==1 and mask[i,j,1]==0 and mask[i,j,2]==1:
+            elif mask[i,j,0]==1 and mask[i,j,1]==0 and mask[i,j,2]==1:    # Magenta (red + blue)
                 Reef[i, j] = 1.0
-            elif mask[i,j,0]==0 and mask[i,j,1]==1 and mask[i,j,2]==1:
+            elif mask[i,j,0]==0 and mask[i,j,1]==1 and mask[i,j,2]==1:    # Cyan (green + blue)
                 Wreck[i, j] = 1.0
     
     # Stack as (5, H, W) for PyTorch
@@ -72,7 +72,7 @@ class SUIMDataset(Dataset):
         self.train_dir = train_dir
         self.image_dir = os.path.join(train_dir, image_folder)
         self.mask_dir = os.path.join(train_dir, mask_folder)
-        self.target_size = target_size
+        self.target_size = target_size                          # (width, height) para o qual as imagens vão ser cortadas
         self.augmentation = augmentation
         
         # Get all image paths
@@ -101,10 +101,10 @@ class SUIMDataset(Dataset):
     
     def __getitem__(self, idx):
         # Load image
-        img_path = self.image_paths[idx]
-        img_name = os.path.basename(img_path)
-        mask_name = os.path.splitext(img_name)[0] + '.bmp'
-        mask_path = os.path.join(self.mask_dir, mask_name)
+        img_path = self.image_paths[idx]       
+        img_name = os.path.basename(img_path)  
+        mask_name = os.path.splitext(img_name)[0] + '.bmp'      
+        mask_path = os.path.join(self.mask_dir, mask_name)     # Corresponding mask path
         
         # Load as PIL images
         image = Image.open(img_path).convert('RGB')
