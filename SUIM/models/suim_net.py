@@ -140,7 +140,7 @@ class SUIM_Net():
     def get_model_RSB(self, n_classes):
         img_input, features = Suim_Encoder_RSB(self.inp_shape, channels=3)
         out = Suim_Decoder_RSB(features, n_classes) 
-        return Model(input=img_input, output=out)
+        return Model(inputs=img_input, outputs=out)
 
     def get_model_VGG16(self, n_classes):
         vgg = VGG16(input_shape=self.img_shape, include_top=False, weights='imagenet')
@@ -159,10 +159,10 @@ class SUIM_Net():
         dec4 = UpSampling2D(size=2)(dec3)
         ## return output layer
         out = Conv2D(n_classes, (3, 3), padding='same', activation='sigmoid', name='output')(dec4)
-        return Model(vgg.input, out)
+        return Model(inputs=vgg.input, outputs=out)
 
 
 if __name__=="__main__":
     suim_net = SUIM_Net('VGG', im_res=(320, 256, 3))
-    #print (suim_net.model.summary())
+    print (suim_net.model.summary())
 
