@@ -2,6 +2,7 @@
 # SUIM-Net model for underwater image segmentation
 # Paper: https://arxiv.org/pdf/2004.01241.pdf  
 """
+
 import tensorflow as tf
 from tensorflow.keras.models import Model
 from tensorflow.keras.layers import Input, UpSampling2D, Conv2D

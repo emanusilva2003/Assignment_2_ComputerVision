@@ -39,9 +39,9 @@ def getRobotFishHumanReefWrecks(mask):
     
     for i in range(imw):
         for j in range(imh):
-            if mask[i,j,0]==0 and mask[i,j,1]==0 and mask[i,j,2]==1:       # Green
+            if mask[i,j,0]==0 and mask[i,j,1]==0 and mask[i,j,2]==1:      # Blue
                 Human[i, j] = 1.0
-            elif mask[i,j,0]==1 and mask[i,j,1]==0 and mask[i,j,2]==0:     # Red
+            elif mask[i,j,0]==1 and mask[i,j,1]==0 and mask[i,j,2]==0:    # Red
                 Robot[i, j] = 1.0
             elif mask[i,j,0]==1 and mask[i,j,1]==1 and mask[i,j,2]==0:    # Yellow
                 Fish[i, j] = 1.0
@@ -142,7 +142,7 @@ class SUIMDataset(Dataset):
         Apply synchronized augmentation to image and mask
         Mimics Keras ImageDataGenerator behavior
         """
-        # Random horizontal flip
+        # Random horizontal flip (dict.get(key, fallback))
         if self.aug_params.get('horizontal_flip', False) and random.random() > 0.5:
             image = TF.hflip(image)
             mask = TF.hflip(mask)
@@ -192,7 +192,7 @@ class SUIMDataset(Dataset):
 
 
 def get_suim_dataloader(train_dir, batch_size=8, image_folder="images", mask_folder="masks",
-                        target_size=(320, 240), augmentation=True, augmentation_params=None,
+                        target_size=(320, 256), augmentation=True, augmentation_params=None,
                         num_workers=4, shuffle=True):
     """
     Create PyTorch DataLoader for SUIM dataset
@@ -225,13 +225,13 @@ if __name__ == "__main__":
     train_dir = "SUIM/train_val"
     
     # Create dataset
-    dataset = SUIMDataset(train_dir, target_size=(320, 240), augmentation=True)
+    dataset = SUIMDataset(train_dir, target_size=(320, 256), augmentation=True)
     print(f"Dataset size: {len(dataset)}")
     
     # Test loading one sample
     img, mask = dataset[0]
-    print(f"Image shape: {img.shape}")  # Should be (3, 240, 320)
-    print(f"Mask shape: {mask.shape}")   # Should be (5, 240, 320)
+    print(f"Image shape: {img.shape}")  # Should be (3, 256, 320)
+    print(f"Mask shape: {mask.shape}")   # Should be (5, 256, 320)
     print(f"Image range: [{img.min():.3f}, {img.max():.3f}]")
     print(f"Mask unique values: {torch.unique(mask)}")
     
