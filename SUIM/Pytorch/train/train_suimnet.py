@@ -2,7 +2,12 @@
 # Training pipeline for SUIM-Net in PyTorch
 # Paper: https://arxiv.org/pdf/2004.01241.pdf  
 """
+# Silenciar warnings do TensorFlow ANTES de qualquer import
+# (TensorBoard importa TensorFlow automaticamente)
 import os
+os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'  # Silencia logs TensorFlow
+os.environ['TF_ENABLE_ONEDNN_OPTS'] = '0'  # Desativa oneDNN
+
 import torch
 import torch.nn as nn
 import torch.optim as optim
@@ -12,10 +17,15 @@ from tqdm import tqdm
 
 # Local imports
 import sys
-sys.path.append(dirname(abspath(__file__)))
+# Add parent directory to path to find models and utils
+script_dir = dirname(abspath(__file__))
+#print(f"Script directory: {script_dir}")
+parent_dir = dirname(script_dir)  # Go up one level to SUIM/Pytorch/
+#print(f"Parent directory: {parent_dir}")
+sys.path.append(parent_dir)
+
 from models.suim_net import SUIM_Net
 from utils.data_utils import get_suim_dataloader
-
 
 def train_suimnet(base='VGG', batch_size=8, num_epochs=50, learning_rate=1e-4, device='cuda'):
     """
@@ -28,11 +38,12 @@ def train_suimnet(base='VGG', batch_size=8, num_epochs=50, learning_rate=1e-4, d
         learning_rate: Initial learning rate
         device: 'cuda' or 'cpu'
     """
+
     # Setup directories
     script_dir = dirname(abspath(__file__))
-    train_dir = join(script_dir, "..", "SUIM", "train_val")
-    ckpt_dir = join(script_dir, "ckpt")
-    log_dir = join(script_dir, "logs")
+    train_dir = join(script_dir, "..","..", "train_val")
+    ckpt_dir = join(script_dir, "..", "ckpt")
+    log_dir = join(script_dir, "..", "logs")
     
     if not exists(ckpt_dir):
         os.makedirs(ckpt_dir)
@@ -41,7 +52,7 @@ def train_suimnet(base='VGG', batch_size=8, num_epochs=50, learning_rate=1e-4, d
     
     # Model configuration
     if base == 'RSB':
-        im_res = (320, 240)  # (width, height)
+        im_res = (320, 256)  # (width, height) #Rever height
         ckpt_name = "suimnet_rsb.pth"
     else:  # VGG
         im_res = (320, 256)
@@ -91,7 +102,7 @@ def train_suimnet(base='VGG', batch_size=8, num_epochs=50, learning_rate=1e-4, d
     
     # Learning rate scheduler (reduce on plateau)
     scheduler = optim.lr_scheduler.ReduceLROnPlateau(
-        optimizer, mode='min', factor=0.5, patience=5, verbose=True
+        optimizer, mode='min', factor=0.5, patience=5
     )
     
     # TensorBoard logger
@@ -202,9 +213,10 @@ if __name__ == "__main__":
     
     # Train model
     train_suimnet(
-        base=args.base,
+        base="RSB",
         batch_size=args.batch_size,
         num_epochs=args.epochs,
         learning_rate=args.lr,
         device=args.device
     )
+    
