@@ -27,7 +27,7 @@ sys.path.append(parent_dir)
 from models.suim_net import SUIM_Net
 from utils.data_utils import get_suim_dataloader
 
-def train_suimnet(base='VGG', batch_size=8, num_epochs=50, learning_rate=1e-4, device='cuda'):
+def train_suimnet(base='VGG', batch_size=8, num_epochs=50, learning_rate=1e-4, augmentation=True, device='cuda'):
     """
     Train SUIM-Net model
     
@@ -42,8 +42,8 @@ def train_suimnet(base='VGG', batch_size=8, num_epochs=50, learning_rate=1e-4, d
     # Setup directories
     script_dir = dirname(abspath(__file__))
     train_dir = join(script_dir, "..","..", "train_val")
-    ckpt_dir = join(script_dir, "..", "ckpt")
-    log_dir = join(script_dir, "..", "logs")
+    ckpt_dir = join(script_dir, "..", "ckptNOAUG")
+    log_dir = join(script_dir, "..", "logsNOAUG")
     
     if not exists(ckpt_dir):
         os.makedirs(ckpt_dir)
@@ -70,14 +70,16 @@ def train_suimnet(base='VGG', batch_size=8, num_epochs=50, learning_rate=1e-4, d
     print(f"Trainable parameters: {trainable_params:,}")
     
     # Data augmentation parameters (matching Keras config)
-    aug_params = {
-        'rotation_range': 0.2,
-        'width_shift_range': 0.05,
-        'height_shift_range': 0.05,
-        'shear_range': 0.05,
-        'zoom_range': 0.05,
-        'horizontal_flip': True
-    }
+    aug_params=None
+    if augmentation:
+        aug_params = {
+            'rotation_range': 0.2,
+            'width_shift_range': 0.05,
+            'height_shift_range': 0.05,
+            'shear_range': 0.05,
+            'zoom_range': 0.05,
+            'horizontal_flip': True
+        }
     
     # Create data loader
     print(f"Loading training data from {train_dir}...")
@@ -87,7 +89,7 @@ def train_suimnet(base='VGG', batch_size=8, num_epochs=50, learning_rate=1e-4, d
         image_folder="images",
         mask_folder="masks",
         target_size=im_res,
-        augmentation=True,
+        augmentation=augmentation,
         augmentation_params=aug_params,
         num_workers=4,
         shuffle=True
@@ -156,7 +158,7 @@ def train_suimnet(base='VGG', batch_size=8, num_epochs=50, learning_rate=1e-4, d
         writer.add_scalar('Learning_Rate', optimizer.param_groups[0]['lr'], epoch)
         
         # Update learning rate
-        scheduler.step(avg_loss)
+        # scheduler.step(avg_loss)
         
         # Save best model
         if avg_loss < best_loss:
@@ -186,6 +188,7 @@ def train_suimnet(base='VGG', batch_size=8, num_epochs=50, learning_rate=1e-4, d
 
 
 if __name__ == "__main__":
+    """
     import argparse
     
     parser = argparse.ArgumentParser(description='Train SUIM-Net')
@@ -197,6 +200,7 @@ if __name__ == "__main__":
                         help='Number of epochs (default: 50)')
     parser.add_argument('--lr', type=float, default=1e-4,
                         help='Learning rate (default: 1e-4)')
+    parser.add_argument('--aug')
     parser.add_argument('--device', type=str, default='cuda',
                         help='Device: cuda or cpu (default: cuda)')
     
@@ -210,13 +214,14 @@ if __name__ == "__main__":
     print(f"Using device: {args.device}")
     if args.device == 'cuda':
         print(f"GPU: {torch.cuda.get_device_name(0)}")
-    
+    """
     # Train model
     train_suimnet(
         base="RSB",
-        batch_size=args.batch_size,
-        num_epochs=args.epochs,
-        learning_rate=args.lr,
-        device=args.device
+        batch_size=8,
+        num_epochs=50,
+        learning_rate=1e-4,
+        augmentation=False,
+        device="cuda"
     )
     
