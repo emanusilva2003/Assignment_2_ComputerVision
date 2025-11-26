@@ -165,6 +165,11 @@ class SUIMDataset(Dataset):
             if self.augmentation:
                 image, mask = self._apply_augmentation(image, mask)
             
+            # Ensure target size (after augmentation might change size slightly)
+            if image.size != self.target_size:
+                image = image.resize(self.target_size, Image.BILINEAR)
+                mask = mask.resize(self.target_size, Image.NEAREST)
+            
             # Convert to tensors
             image = self.to_tensor(image)  # (3, H, W), values in [0, 1]
             
