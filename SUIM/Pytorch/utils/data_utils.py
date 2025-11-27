@@ -97,7 +97,7 @@ class SUIMDataset(Dataset):
         self.to_tensor = transforms.ToTensor()
         
     def __len__(self):
-        return len(self.image_paths)
+        return len(self.image_paths) # Total number of images
     
     def __getitem__(self, idx):
         # Load image
@@ -142,7 +142,7 @@ class SUIMDataset(Dataset):
         Apply synchronized augmentation to image and mask
         Mimics Keras ImageDataGenerator behavior
         """
-        # Random horizontal flip (dict.get(key, fallback))
+        # Random horizontal flip (dict.get(key, fallback))  erve para duplicar dados virando tudo de um lado para o outro.
         if self.aug_params.get('horizontal_flip', False) and random.random() > 0.5:
             image = TF.hflip(image)
             mask = TF.hflip(mask)
@@ -154,7 +154,7 @@ class SUIMDataset(Dataset):
             image = TF.rotate(image, angle, interpolation=transforms.InterpolationMode.BILINEAR)
             mask = TF.rotate(mask, angle, interpolation=transforms.InterpolationMode.NEAREST)
         
-        # Random zoom (scale)
+        # Random zoom (scale)            Redimensionar a imagem e a máscara para esse tamanho maior/menor
         if self.aug_params.get('zoom_range', 0) > 0:
             zoom_factor = 1.0 + random.uniform(-self.aug_params['zoom_range'], 
                                                self.aug_params['zoom_range'])
@@ -165,7 +165,7 @@ class SUIMDataset(Dataset):
             image = TF.center_crop(image, self.target_size[::-1])  # (H, W)
             mask = TF.center_crop(mask, self.target_size[::-1])
         
-        # Random shift (translate)
+        # Random shift (translate)    Isto move a imagem para cima/baixo/esquerda/direita
         shift_x = shift_y = 0
         if self.aug_params.get('width_shift_range', 0) > 0:
             shift_x = int(random.uniform(-self.aug_params['width_shift_range'], 
@@ -179,7 +179,7 @@ class SUIMDataset(Dataset):
             mask = TF.affine(mask, angle=0, translate=[shift_x, shift_y], scale=1.0, shear=0,
                             interpolation=transforms.InterpolationMode.NEAREST)
         
-        # Random shear
+        # Random shear         inclina a imagem na diagonal
         if self.aug_params.get('shear_range', 0) > 0:
             shear = random.uniform(-self.aug_params['shear_range'] * 180, 
                                    self.aug_params['shear_range'] * 180)
@@ -203,7 +203,7 @@ def get_suim_dataloader(train_dir, batch_size=8, image_folder="images", mask_fol
         image_folder: Subfolder for images
         mask_folder: Subfolder for masks
         target_size: (width, height) tuple
-        augmentation: Whether to apply augmentation
+        augmentation: wether to apply augmentation
         augmentation_params: Dict with augmentation parameters
         num_workers: Number of workers for data loading
         shuffle: Whether to shuffle data
@@ -212,7 +212,7 @@ def get_suim_dataloader(train_dir, batch_size=8, image_folder="images", mask_fol
         DataLoader object
     """
     dataset = SUIMDataset(train_dir, image_folder, mask_folder, 
-                          target_size, augmentation, augmentation_params)
+                          target_size, augmentation, augmentation_params)  # Create dataset
     
     dataloader = DataLoader(dataset, batch_size=batch_size, shuffle=shuffle,
                            num_workers=num_workers, pin_memory=True)
