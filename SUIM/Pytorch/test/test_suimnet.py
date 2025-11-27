@@ -23,12 +23,15 @@ sys.path.append(parent_dir)
 from models.suim_net import SUIM_Net
 from utils.data_utils import SUIMDataset, binaryMasksToRGB
 
-## experiment directories
+## experiment directories - Change these paths as needed
 #test_dir = "/mnt/data1/ImageSeg/suim/TEST/images/"
 test_dir = "SUIM/TEST/images/"
-
+ckpt_dir = "SUIM/Pytorch/ckpt_RSB_Noaug/"
 ## sample and ckpt dir
-samples_dir = "SUIM/TEST/Pytorch_output/"
+samples_dir = "SUIM/TEST/Pytorch_output_RSB_NoAug/"
+
+
+
 RO_dir = samples_dir + "RO/"
 FB_dir = samples_dir + "FV/"
 WR_dir = samples_dir + "WR/"
@@ -51,7 +54,7 @@ device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 base_ = 'RSB' # 'VGG' or 'RSB'
 if base_=='RSB':
     im_res_ = (320, 256, 3) 
-    ckpt_name = "suimnet_rsb.pth"
+    ckpt_name = "suimnet_rsb_best.pth"
 else: 
     im_res_ = (320, 256, 3)
     ckpt_name = "suimnet_vgg.pth"
@@ -70,7 +73,7 @@ print("="*60 + "\n")
 
 # Load model
 model = SUIM_Net(base=base_, n_classes=5, pretrained=False)
-checkpoint = torch.load(join("SUIM/Pytorch/ckpt/", ckpt_name), map_location=device)
+checkpoint = torch.load(join(ckpt_dir, ckpt_name), map_location=device)
 model.load_state_dict(checkpoint['model_state_dict'])
 model = model.to(device)
 model.eval()
