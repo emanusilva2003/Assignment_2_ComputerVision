@@ -25,6 +25,7 @@ RGB color code and object categories:    Cada pixel da máscara é uma cor RGB, 
 111 SR: Sand/sea-floor (& rocks)
 """
 
+
 def getRobotFishHumanReefWrecks(mask):
     """
     Extract 5 binary masks from RGB mask
@@ -53,6 +54,46 @@ def getRobotFishHumanReefWrecks(mask):
     # Stack as (5, H, W) for PyTorch
     return np.stack((Robot, Fish, Human, Reef, Wreck), axis=0)
 
+def getPaths(data_dir):
+    # read image files from directory
+    exts = ['*.png','*.PNG','*.jpg','*.JPG', '*.JPEG', '*.bmp']
+    image_paths = []
+    for pattern in exts:
+        for d, s, fList in os.walk(data_dir):
+            for filename in fList:
+                if (fnmatch.fnmatch(filename, pattern)):
+                    fname_ = os.path.join(d,filename)
+                    image_paths.append(fname_)
+    return sorted(list(set(image_paths)))
+
+
+def binaryMasksToRGB(RO, FV, HD, RI, WR):
+    """
+    Convert 5 binary masks to a single RGB image using the SUIM color encoding:
+    RO (Robots) - Red (255, 0, 0)
+    FV (Fish/vertebrates) - Yellow (255, 255, 0)
+    HD (Human divers) - Blue (0, 0, 255)
+    RI (Reefs/invertebrates) - Magenta (255, 0, 255)
+    WR (Wrecks/ruins) - Cyan (0, 255, 255)
+    Background - Black (0, 0, 0)
+    """
+    h, w = RO.shape
+    rgb_mask = np.zeros((h, w, 3), dtype=np.uint8)
+    
+    # Apply colors with priority (later ones override earlier ones where they overlap)
+    # RO - Red
+    rgb_mask[RO > 0] = [255, 0, 0]
+    # FV - Yellow
+    rgb_mask[FV > 0] = [255, 255, 0]
+    # HD - Blue
+    rgb_mask[HD > 0] = [0, 0, 255]
+    # RI - Magenta
+    rgb_mask[RI > 0] = [255, 0, 255]
+    # WR - Cyan
+    rgb_mask[WR > 0] = [0, 255, 255]
+    
+    return rgb_mask
+
 
 class SUIMDataset(Dataset):
     """
@@ -71,7 +112,10 @@ class SUIMDataset(Dataset):
         """
         self.train_dir = train_dir
         self.image_dir = os.path.join(train_dir, image_folder)
-        self.mask_dir = os.path.join(train_dir, mask_folder)
+        if mask_folder != None:
+            self.mask_dir = os.path.join(train_dir, mask_folder)
+        else:
+            self.mask_dir = None
         self.target_size = target_size                          # (width, height) para o qual as imagens vão ser cortadas
         self.augmentation = augmentation
         
@@ -103,39 +147,49 @@ class SUIMDataset(Dataset):
         # Load image
         img_path = self.image_paths[idx]       
         img_name = os.path.basename(img_path)  
-        mask_name = os.path.splitext(img_name)[0] + '.bmp'      
-        mask_path = os.path.join(self.mask_dir, mask_name)     # Corresponding mask path
         
         # Load as PIL images
         image = Image.open(img_path).convert('RGB')
-        mask = Image.open(mask_path).convert('RGB')
         
-        # Resize
-        """
-        image = image.resize(self.target_size, Image.BILINEAR)
-        mask = mask.resize(self.target_size, Image.NEAREST)
-        """
-        # Apply augmentation if enabled
-        if self.augmentation:
-            image, mask = self._apply_augmentation(image, mask)
-        
-        # Convert to tensors
-        image = self.to_tensor(image)  # (3, H, W), values in [0, 1]
-        
-        # Normazalize image to [-1, 1]
-        # ver + tarde 
-        
-
-        # Process mask: RGB -> 5 binary channels
-        mask_np = np.array(mask).astype(np.float32) / 255.0
-        mask_np[mask_np > 0.5] = 1.0
-        mask_np[mask_np <= 0.5] = 0.0
-        
-        # Extract 5 categories
-        mask_tensor = getRobotFishHumanReefWrecks(mask_np)  # (5, H, W)
-        mask_tensor = torch.from_numpy(mask_tensor)
-        
-        return image, mask_tensor
+        # Check if mask_folder is provided (training mode)
+        if self.mask_dir and os.path.exists(self.mask_dir):
+            mask_name = os.path.splitext(img_name)[0] + '.bmp'      
+            mask_path = os.path.join(self.mask_dir, mask_name)     # Corresponding mask path
+            
+            if not os.path.exists(mask_path):
+                raise FileNotFoundError(f"Mask not found: {mask_path}")
+                
+            mask = Image.open(mask_path).convert('RGB')
+            
+            # Apply augmentation if enabled
+            if self.augmentation:
+                image, mask = self._apply_augmentation(image, mask)
+            
+            # Ensure target size (after augmentation might change size slightly)
+            if image.size != self.target_size:
+                image = image.resize(self.target_size, Image.BILINEAR)
+                mask = mask.resize(self.target_size, Image.NEAREST)
+            
+            # Convert to tensors
+            image = self.to_tensor(image)  # (3, H, W), values in [0, 1]
+            
+            # Process mask: RGB -> 5 binary channels
+            mask_np = np.array(mask).astype(np.float32) / 255.0
+            mask_np[mask_np > 0.5] = 1.0
+            mask_np[mask_np <= 0.5] = 0.0
+            
+            # Extract 5 categories
+            mask_tensor = getRobotFishHumanReefWrecks(mask_np)  # (5, H, W)
+            mask_tensor = torch.from_numpy(mask_tensor)
+            
+            return image, mask_tensor
+        else:
+            # Test mode: return only image and path
+            # Resize to target size
+            image = image.resize(self.target_size, Image.BILINEAR)
+            image = self.to_tensor(image)  # (3, H, W), values in [0, 1]
+            
+            return image, img_path
     
     def _apply_augmentation(self, image, mask):
         """
