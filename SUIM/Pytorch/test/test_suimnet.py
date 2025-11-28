@@ -26,9 +26,9 @@ from utils.data_utils import SUIMDataset, binaryMasksToRGB
 ## experiment directories - Change these paths as needed
 #test_dir = "/mnt/data1/ImageSeg/suim/TEST/images/"
 test_dir = "SUIM/TEST/images/"
-ckpt_dir = "SUIM/Pytorch/ckpt_VGG_Aug/"
+ckpt_dir = "SUIM/Pytorch/ckpt_VGG_Noaug/"
 ## sample and ckpt dir
-samples_dir = "SUIM/TEST/Pytorch_output_VGG_Aug/"
+samples_dir = "SUIM/TEST/Pytorch_output_VGG_Noaug2/"
 
 
 
@@ -57,7 +57,7 @@ if base_=='RSB':
     ckpt_name = "suimnet_rsb_best.pth"
 else: 
     im_res_ = (320, 256, 3)
-    ckpt_name = "suimnet_vgg_best.pth"
+    ckpt_name = "suimnet_vgg_epoch_10.pth"
 
 print("\n" + "="*60)
 print("GPU Information:")

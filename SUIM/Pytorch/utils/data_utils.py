@@ -247,7 +247,7 @@ class SUIMDataset(Dataset):
 
 def get_suim_dataloader(train_dir, batch_size=8, image_folder="images", mask_folder="masks",
                         target_size=(320, 256), augmentation=True, augmentation_params=None,
-                        num_workers=4, shuffle=True):
+                        num_workers=4, shuffle=True, validation=False, val_ratio=0.2):
     """
     Create PyTorch DataLoader for SUIM dataset
     
@@ -257,21 +257,59 @@ def get_suim_dataloader(train_dir, batch_size=8, image_folder="images", mask_fol
         image_folder: Subfolder for images
         mask_folder: Subfolder for masks
         target_size: (width, height) tuple
-        augmentation: wether to apply augmentation
+        augmentation: Whether to apply augmentation (only for training set)
         augmentation_params: Dict with augmentation parameters
         num_workers: Number of workers for data loading
         shuffle: Whether to shuffle data
+        validation: If True, split dataset into train/val and return both loaders
+        val_ratio: Fraction of data to use for validation (default: 0.2 = 20%)
     
     Returns:
-        DataLoader object
+        DataLoader object, or (train_loader, val_loader) if validation=True
     """
-    dataset = SUIMDataset(train_dir, image_folder, mask_folder, 
-                          target_size, augmentation, augmentation_params)  # Create dataset
     
-    dataloader = DataLoader(dataset, batch_size=batch_size, shuffle=shuffle,
-                           num_workers=num_workers, pin_memory=True)
-    
-    return dataloader
+    if validation:
+        # Create train dataset with augmentation
+        train_dataset = SUIMDataset(train_dir, image_folder, mask_folder, 
+                                    target_size, augmentation=augmentation, 
+                                    augmentation_params=augmentation_params)
+        
+        # Create validation dataset without augmentation
+        val_dataset = SUIMDataset(train_dir, image_folder, mask_folder, 
+                                  target_size, augmentation=False, 
+                                  augmentation_params=None)
+        
+        # Split both datasets with same indices
+        dataset_size = len(train_dataset)
+        val_size = int(dataset_size * val_ratio)
+        train_size = dataset_size - val_size
+        
+        # Get split indices
+        indices = list(range(dataset_size))
+        generator = torch.Generator().manual_seed(42)
+        train_indices = torch.randperm(dataset_size, generator=generator)[:train_size].tolist()
+        val_indices = torch.randperm(dataset_size, generator=generator)[train_size:].tolist()
+        
+        # Create subsets
+        train_subset = torch.utils.data.Subset(train_dataset, train_indices)
+        val_subset = torch.utils.data.Subset(val_dataset, val_indices)
+        
+        # Create train loader (with augmentation and shuffle)
+        train_loader = DataLoader(train_subset, batch_size=batch_size, shuffle=shuffle,
+                                 num_workers=num_workers, pin_memory=True)
+        
+        # Create validation loader (no augmentation, no shuffle)
+        val_loader = DataLoader(val_subset, batch_size=batch_size, shuffle=False,
+                               num_workers=num_workers, pin_memory=True)
+        
+        return train_loader, val_loader
+    else:
+        # Single dataset (original behavior)
+        dataset = SUIMDataset(train_dir, image_folder, mask_folder, 
+                            target_size, augmentation, augmentation_params)
+        dataloader = DataLoader(dataset, batch_size=batch_size, shuffle=shuffle,
+                               num_workers=num_workers, pin_memory=True)
+        return dataloader
 
 
 if __name__ == "__main__":
