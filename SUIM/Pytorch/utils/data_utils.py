@@ -287,6 +287,9 @@ def get_suim_dataloader(train_dir, batch_size=8, image_folder="images", mask_fol
         # Get split indices
         indices = list(range(dataset_size))
         generator = torch.Generator().manual_seed(42)
+        torch.manual_seed(42)
+        torch.cuda.manual_seed(42)
+        torch.backends.cudnn.deterministic = True
         train_indices = torch.randperm(dataset_size, generator=generator)[:train_size].tolist()
         val_indices = torch.randperm(dataset_size, generator=generator)[train_size:].tolist()
         
