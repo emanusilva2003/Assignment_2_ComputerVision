@@ -26,10 +26,18 @@ from utils.data_utils import SUIMDataset, binaryMasksToRGB
 ## experiment directories - Change these paths as needed
 #test_dir = "/mnt/data1/ImageSeg/suim/TEST/images/"
 test_dir = "SUIM/TEST/images/"
-ckpt_dir = "SUIM/Pytorch/ckpt_VGG_Noaug/"
+ckpt_dir = "SUIM/Pytorch/ckpt_RSB_Aug3/"
 ## sample and ckpt dir
-samples_dir = "SUIM/TEST/Pytorch_output_VGG_Noaug2/"
-
+samples_dir = "SUIM/TEST/Pytorch_output_RSB_aug3_withvalidation_38/"
+    
+## input/output shapes
+base_ = 'RSB' # 'VGG' or 'RSB'
+if base_=='RSB':
+    im_res_ = (320, 256, 3) 
+    ckpt_name = "suimnet_rsb_epoch_38.pth"
+else: 
+    im_res_ = (320, 256, 3)
+    ckpt_name = "suimnet_vgg_epoch_40.pth"
 
 
 RO_dir = samples_dir + "RO/"
@@ -49,15 +57,6 @@ if not exists(RGB_dir): os.makedirs(RGB_dir)
 
 ## Device configuration
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-
-## input/output shapes
-base_ = 'VGG' # 'VGG' or 'RSB'
-if base_=='RSB':
-    im_res_ = (320, 256, 3) 
-    ckpt_name = "suimnet_rsb_best.pth"
-else: 
-    im_res_ = (320, 256, 3)
-    ckpt_name = "suimnet_vgg_epoch_10.pth"
 
 print("\n" + "="*60)
 print("GPU Information:")
@@ -83,7 +82,8 @@ print(f"Model: SUIM-Net ({base_})")
 print(f"Parameters: {total_params:,}")
 print(f"Checkpoint: {ckpt_name}")
 print(f"Epoch: {checkpoint['epoch']+1}, Loss: {checkpoint['loss']:.4f}\n")
-
+if checkpoint.get('val_loss') is not None:
+    print(f"Validation Loss: {checkpoint['val_loss']:.4f}\n")
 
 im_h, im_w = im_res_[1], im_res_[0]
 
