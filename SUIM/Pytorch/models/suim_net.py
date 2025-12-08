@@ -9,8 +9,10 @@ from torchvision.models import vgg16, VGG16_Weights
 
 try:
     from .suim_net_swin import SUIM_Net_Swin
+    from .suim_net_swin_PPM import SUIM_Net_Swin_PPM
 except ImportError:
     from suim_net_swin import SUIM_Net_Swin
+    from suim_net_swin_PPM import SUIM_Net_Swin_PPM
 
 
 class RSB(nn.Module):
@@ -288,6 +290,7 @@ class SUIM_Net(nn.Module):
     - base='RSB' for RSB-based encoder
     - base='VGG' for VGG16 encoder
     - base='SWIN' for Swin Transformer Tiny encoder
+    - base='SWIN_PPM' for Swin Transformer + Pyramid Pooling Module
     """
     def __init__(self, base='RSB', n_classes=5, pretrained=True):
         super(SUIM_Net, self).__init__()
@@ -302,14 +305,17 @@ class SUIM_Net(nn.Module):
         elif base == 'SWIN':
             self.model = SUIM_Net_Swin(n_classes=n_classes, pretrained=pretrained)
             self.base = 'SWIN'
+        elif base == 'SWIN_PPM':
+            self.model = SUIM_Net_Swin_PPM(n_classes=n_classes, pretrained=pretrained)
+            self.base = 'SWIN_PPM'
         else:
-            raise ValueError(f"Unknown base: {base}. Use 'RSB', 'VGG', or 'SWIN'")
+            raise ValueError(f"Unknown base: {base}. Use 'RSB', 'VGG', 'SWIN', or 'SWIN_PPM'")
     
     def forward(self, x):
         if self.base == 'RSB':
             enc1, enc2, enc3 = self.encoder(x)
             out = self.decoder(enc1, enc2, enc3)
-        else:  # VGG or SWIN
+        else:  # VGG, SWIN, or SWIN_PPM
             out = self.model(x)
         return out
     
@@ -328,6 +334,9 @@ if __name__ == "__main__":
     
     # Test Swin model
     model_swin = SUIM_Net(base='SWIN', n_classes=5).to(device)
+    
+    # Test Swin + PPM model
+    model_swin_ppm = SUIM_Net(base='SWIN_PPM', n_classes=5).to(device)
     
     # Test forward pass (RSB and VGG use 320x256)
     x = torch.randn(1, 3, 256, 320).to(device)
@@ -353,4 +362,11 @@ if __name__ == "__main__":
     print(f"  Input shape: {x_swin.shape}")
     print(f"  Output shape: {out_swin.shape}")
     total, trainable = model_swin.count_parameters()
+    print(f"  Parameters: {total:,} total, {trainable:,} trainable")
+    
+    print("\nSwin Transformer + PPM Model:")
+    out_swin_ppm = model_swin_ppm(x_swin)
+    print(f"  Input shape: {x_swin.shape}")
+    print(f"  Output shape: {out_swin_ppm.shape}")
+    total, trainable = model_swin_ppm.count_parameters()
     print(f"  Parameters: {total:,} total, {trainable:,} trainable")
