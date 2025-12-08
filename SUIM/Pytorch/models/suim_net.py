@@ -7,6 +7,11 @@ import torch.nn as nn
 import torch.nn.functional as F
 from torchvision.models import vgg16, VGG16_Weights
 
+try:
+    from .suim_net_swin import SUIM_Net_Swin
+except ImportError:
+    from suim_net_swin import SUIM_Net_Swin
+
 
 class RSB(nn.Module):
     """
@@ -282,6 +287,7 @@ class SUIM_Net(nn.Module):
     SUIM-Net model wrapper
     - base='RSB' for RSB-based encoder
     - base='VGG' for VGG16 encoder
+    - base='SWIN' for Swin Transformer Tiny encoder
     """
     def __init__(self, base='RSB', n_classes=5, pretrained=True):
         super(SUIM_Net, self).__init__()
@@ -293,14 +299,17 @@ class SUIM_Net(nn.Module):
         elif base == 'VGG':
             self.model = SUIM_Net_VGG(n_classes=n_classes, pretrained=pretrained)
             self.base = 'VGG'
+        elif base == 'SWIN':
+            self.model = SUIM_Net_Swin(n_classes=n_classes, pretrained=pretrained)
+            self.base = 'SWIN'
         else:
-            raise ValueError(f"Unknown base: {base}. Use 'RSB' or 'VGG'")
+            raise ValueError(f"Unknown base: {base}. Use 'RSB', 'VGG', or 'SWIN'")
     
     def forward(self, x):
         if self.base == 'RSB':
             enc1, enc2, enc3 = self.encoder(x)
             out = self.decoder(enc1, enc2, enc3)
-        else:  # VGG
+        else:  # VGG or SWIN
             out = self.model(x)
         return out
     
@@ -309,8 +318,6 @@ class SUIM_Net(nn.Module):
         total = sum(p.numel() for p in self.parameters())
         trainable = sum(p.numel() for p in self.parameters() if p.requires_grad)
         return total, trainable
-
-
 if __name__ == "__main__":
     # Test RSB model
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
@@ -319,7 +326,10 @@ if __name__ == "__main__":
     # Test VGG model
     model_vgg = SUIM_Net(base='VGG', n_classes=5).to(device)
     
-    # Test forward pass
+    # Test Swin model
+    model_swin = SUIM_Net(base='SWIN', n_classes=5).to(device)
+    
+    # Test forward pass (RSB and VGG use 320x256)
     x = torch.randn(1, 3, 256, 320).to(device)
     
     print("RSB Model:")
@@ -334,4 +344,13 @@ if __name__ == "__main__":
     print(f"  Input shape: {x.shape}")
     print(f"  Output shape: {out_vgg.shape}")
     total, trainable = model_vgg.count_parameters()
+    print(f"  Parameters: {total:,} total, {trainable:,} trainable")
+    
+    # Swin requires 256x256 input
+    x_swin = torch.randn(1, 3, 256, 320).to(device)
+    print("\nSwin Transformer Model:")
+    out_swin = model_swin(x_swin)
+    print(f"  Input shape: {x_swin.shape}")
+    print(f"  Output shape: {out_swin.shape}")
+    total, trainable = model_swin.count_parameters()
     print(f"  Parameters: {total:,} total, {trainable:,} trainable")

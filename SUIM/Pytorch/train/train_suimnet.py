@@ -32,7 +32,7 @@ def train_suimnet(base='VGG', batch_size=8, num_epochs=50, learning_rate=1e-4, a
     Train SUIM-Net model
     
     Args:
-        base: 'RSB' or 'VGG'
+        base: 'RSB', 'VGG', or 'SWIN'
         batch_size: Training batch size
         num_epochs: Number of training epochs
         learning_rate: Initial learning rate
@@ -50,12 +50,15 @@ def train_suimnet(base='VGG', batch_size=8, num_epochs=50, learning_rate=1e-4, a
     if not exists(log_dir):
         os.makedirs(log_dir)
     
-    # Model configuration
-    if base == 'RSB':
-        im_res = (320, 256)  # (width, height) #Rever height
+    # Swin requires 256x256 input, others use 320x256
+    if base == 'SWIN':
+        target_size = (256, 256)
+        ckpt_name = "suimnet_swin.pth"
+    elif base == 'RSB':
+        target_size = (320, 256)
         ckpt_name = "suimnet_rsb.pth"
     else:  # VGG
-        im_res = (320, 256)
+        target_size = (320, 256)
         ckpt_name = "suimnet_vgg.pth"
     
     model_ckpt_path = join(ckpt_dir, ckpt_name)
@@ -88,7 +91,7 @@ def train_suimnet(base='VGG', batch_size=8, num_epochs=50, learning_rate=1e-4, a
         batch_size=batch_size,
         image_folder="images",
         mask_folder="masks",
-        target_size=im_res,
+        target_size=target_size,
         augmentation=augmentation,
         augmentation_params=aug_params,
         num_workers=4,
