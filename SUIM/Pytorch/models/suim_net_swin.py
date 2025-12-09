@@ -20,8 +20,11 @@ class SUIM_Net_Swin(nn.Module):
     - Stage 3: H/16 x W/16 x 384  (6 Swin blocks + patch merging)
     - Stage 4: H/32 x W/32 x 768  (2 Swin blocks + patch merging)
     """
-    def __init__(self, n_classes=5, pretrained=True):
+    def __init__(self, n_classes=5, pretrained=True, eps=1e-5):
         super(SUIM_Net_Swin, self).__init__()
+        
+        # Save eps for BatchNorm layers
+        self.eps = eps
         
         # Load Swin Transformer Tiny encoder
         weights = Swin_T_Weights.IMAGENET1K_V1 if pretrained else None
@@ -48,7 +51,7 @@ class SUIM_Net_Swin(nn.Module):
         # dec-4: 96 + 96 (skip) → 32 (stays at H/4)
         self.up4 = nn.Sequential(
             nn.Conv2d(192, 32, kernel_size=3, padding=1),  # 192 = 96 + 96
-            nn.BatchNorm2d(32),
+            nn.BatchNorm2d(32, eps=eps),
             nn.ReLU(inplace=True)
         )
         
@@ -56,7 +59,7 @@ class SUIM_Net_Swin(nn.Module):
         self.up5 = nn.Sequential(
             nn.Upsample(scale_factor=4, mode='bilinear', align_corners=True),
             nn.Conv2d(32, 32, kernel_size=3, padding=1),
-            nn.BatchNorm2d(32),
+            nn.BatchNorm2d(32, eps=eps),
             nn.ReLU(inplace=True)
         )
         
@@ -70,7 +73,7 @@ class SUIM_Net_Swin(nn.Module):
         return nn.Sequential(
             nn.Upsample(scale_factor=2, mode='bilinear', align_corners=True),
             nn.Conv2d(in_channels, out_channels, kernel_size=3, padding=1),
-            nn.BatchNorm2d(out_channels),
+            nn.BatchNorm2d(out_channels, eps=self.eps),
             nn.ReLU(inplace=True)
         )
     
@@ -185,7 +188,7 @@ if __name__ == "__main__":
     print("SUIM-Net with Swin Transformer Tiny Encoder")
     print("="*60)
     
-    model = SUIM_Net_Swin(n_classes=5, pretrained=True).to(device)
+    model = SUIM_Net_Swin(n_classes=5, pretrained=True, eps = 0.1).to(device)
     
     # Test forward pass
     x = torch.randn(2, 3, 256, 320).to(device)

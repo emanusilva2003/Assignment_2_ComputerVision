@@ -247,7 +247,7 @@ class SUIMDataset(Dataset):
 
 def get_suim_dataloader(train_dir, batch_size=8, image_folder="images", mask_folder="masks",
                         target_size=(320, 256), augmentation=True, augmentation_params=None,
-                        num_workers=4, shuffle=True, validation=False, val_ratio=0.2):
+                        num_workers=4, shuffle=True, validation=False, val_ratio=0.2, drop_last=False):
     """
     Create PyTorch DataLoader for SUIM dataset
     
@@ -299,11 +299,11 @@ def get_suim_dataloader(train_dir, batch_size=8, image_folder="images", mask_fol
         
         # Create train loader (with augmentation and shuffle)
         train_loader = DataLoader(train_subset, batch_size=batch_size, shuffle=shuffle,
-                                 num_workers=num_workers, pin_memory=True)
+                                 num_workers=num_workers, pin_memory=True, drop_last=drop_last)
         
         # Create validation loader (no augmentation, no shuffle)
         val_loader = DataLoader(val_subset, batch_size=batch_size, shuffle=False,
-                               num_workers=num_workers, pin_memory=True)
+                               num_workers=num_workers, pin_memory=True, drop_last=drop_last)
         
         return train_loader, val_loader
     else:
@@ -311,7 +311,7 @@ def get_suim_dataloader(train_dir, batch_size=8, image_folder="images", mask_fol
         dataset = SUIMDataset(train_dir, image_folder, mask_folder, 
                             target_size, augmentation, augmentation_params)
         dataloader = DataLoader(dataset, batch_size=batch_size, shuffle=shuffle,
-                               num_workers=num_workers, pin_memory=True)
+                               num_workers=num_workers, pin_memory=True, drop_last=drop_last)
         return dataloader
 
 

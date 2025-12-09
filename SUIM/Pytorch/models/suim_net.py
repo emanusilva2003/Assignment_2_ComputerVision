@@ -292,9 +292,11 @@ class SUIM_Net(nn.Module):
     - base='SWIN' for Swin Transformer Tiny encoder
     - base='SWIN_PPM' for Swin Transformer + Pyramid Pooling Module
     """
-    def __init__(self, base='RSB', n_classes=5, pretrained=True):
+    def __init__(self, base='RSB', n_classes=5, pretrained=True, eps=1e-5):
         super(SUIM_Net, self).__init__()
         
+        self.eps = eps    
+
         if base == 'RSB':
             self.encoder = SUIM_Encoder_RSB(in_channels=3)
             self.decoder = SUIM_Decoder_RSB(n_classes=n_classes)
@@ -303,10 +305,10 @@ class SUIM_Net(nn.Module):
             self.model = SUIM_Net_VGG(n_classes=n_classes, pretrained=pretrained)
             self.base = 'VGG'
         elif base == 'SWIN':
-            self.model = SUIM_Net_Swin(n_classes=n_classes, pretrained=pretrained)
+            self.model = SUIM_Net_Swin(n_classes=n_classes, pretrained=pretrained, eps=self.eps)
             self.base = 'SWIN'
         elif base == 'SWIN_PPM':
-            self.model = SUIM_Net_Swin_PPM(n_classes=n_classes, pretrained=pretrained)
+            self.model = SUIM_Net_Swin_PPM(n_classes=n_classes, pretrained=pretrained, eps=self.eps)
             self.base = 'SWIN_PPM'
         else:
             raise ValueError(f"Unknown base: {base}. Use 'RSB', 'VGG', 'SWIN', or 'SWIN_PPM'")

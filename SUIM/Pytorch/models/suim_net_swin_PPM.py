@@ -68,8 +68,11 @@ class SUIM_Net_Swin_PPM(nn.Module):
     SUIM-Net + Swin Transformer Tiny + PPM Head
     """
 
-    def __init__(self, n_classes=5, pretrained=True):
+    def __init__(self, n_classes=5, pretrained=True, eps=1e-5):
         super().__init__()
+        
+        # Save eps for BatchNorm layers
+        self.eps = eps
 
         # Load Swin Tiny
         weights = Swin_T_Weights.IMAGENET1K_V1 if pretrained else None
@@ -95,7 +98,7 @@ class SUIM_Net_Swin_PPM(nn.Module):
 
         self.up4 = nn.Sequential(
             nn.Conv2d(192, 32, kernel_size=3, padding=1),
-            nn.BatchNorm2d(32),
+            nn.BatchNorm2d(32, eps=eps),
             nn.ReLU(inplace=True)
         )
 
@@ -103,7 +106,7 @@ class SUIM_Net_Swin_PPM(nn.Module):
         self.up5 = nn.Sequential(
             nn.Upsample(scale_factor=4, mode='bilinear', align_corners=True),
             nn.Conv2d(32, 32, kernel_size=3, padding=1),
-            nn.BatchNorm2d(32),
+            nn.BatchNorm2d(32, eps=eps),
             nn.ReLU(inplace=True)
         )
 
@@ -115,7 +118,7 @@ class SUIM_Net_Swin_PPM(nn.Module):
         return nn.Sequential(
             nn.Upsample(scale_factor=2, mode='bilinear', align_corners=True),
             nn.Conv2d(in_c, out_c, 3, padding=1),
-            nn.BatchNorm2d(out_c),
+            nn.BatchNorm2d(out_c, eps=self.eps),
             nn.ReLU(inplace=True)
         )
 
