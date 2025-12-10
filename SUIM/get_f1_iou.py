@@ -14,9 +14,9 @@ from utils.data_utils import getPaths
 from utils.measure_utils import db_eval_boundary, IoU_bin
 
 ## Configuration
-model_name = "SUIM-Net_SWIN_NOAUG"  # Change this for different models
+model_name = "SUIM-Net_SWIN_PPM_NOAUG"  # Change this for different models
 test_dir = "SUIM/TEST/masks/"
-gen_base_dir = "SUIM/TEST/Output_SWIN/"
+gen_base_dir = "SUIM/TEST/Output_SWIN_PPM/"
 output_excel = "SUIM/TEST/evaluation_results.xlsx"
 
 ## Categories to evaluate
