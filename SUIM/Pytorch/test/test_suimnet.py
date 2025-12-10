@@ -26,18 +26,18 @@ from utils.data_utils import SUIMDataset, binaryMasksToRGB
 ## experiment directories - Change these paths as needed
 #test_dir = "/mnt/data1/ImageSeg/suim/TEST/images/"
 test_dir = "SUIM/TEST/images/"
-ckpt_dir = "SUIM/Pytorch/ckptvggaug_lr_scheduler/"
+ckpt_dir = "SUIM/Pytorch/ckptswin_eps/"
 ## sample and ckpt dir
-samples_dir = "SUIM/TEST/Output_VGG_Aug_lr_scheduler/"
+samples_dir = "SUIM/TEST/Output_SWIN/"
     
 ## input/output shapes
-base_ = 'VGG' # 'RSB', 'VGG', or 'SWIN'
+base_ = 'SWIN' # 'RSB', 'VGG', or 'SWIN' or 'SWIN_PPM'
 if base_=='RSB':
     im_res_ = (320, 256, 3) 
     ckpt_name = "suimnet_rsb_epoch_38.pth"
 elif base_=='SWIN':
     im_res_ = (256, 256, 3)
-    ckpt_name = "suimnet_swin.pth"
+    ckpt_name = "suimnet_swin_best.pth"
 else: 
     im_res_ = (320, 256, 3)
     ckpt_name = "suimnet_vgg_best.pth"

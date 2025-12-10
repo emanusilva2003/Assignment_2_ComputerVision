@@ -14,16 +14,18 @@ from utils.data_utils import getPaths
 from utils.measure_utils import db_eval_boundary, IoU_bin
 
 ## Configuration
-model_name = "SUIM-Net_VGG_Aug"  # Change this for different models
+model_name = "SUIM-Net_SWIN_NOAUG"  # Change this for different models
 test_dir = "SUIM/TEST/masks/"
-gen_base_dir = "SUIM/TEST/Pytorch_output_VGG_Aug/"
+gen_base_dir = "SUIM/TEST/Output_SWIN/"
 output_excel = "SUIM/TEST/evaluation_results.xlsx"
 
 ## Categories to evaluate
 categories = ["HD", "WR", "RO", "RI", "FV"]
 
 ## input/output shapes
-im_res = (320, 256) # Ajustar apenas para os modelos originais
+
+# im_res = (320, 256) # VGG E RSB
+im_res = (256, 256) # SWIN
 
 # for reading and scaling input images
 def read_and_bin(im_path):
