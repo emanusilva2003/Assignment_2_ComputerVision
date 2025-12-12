@@ -84,6 +84,76 @@ def getRobotFishHumanReefWrecks(mask, num_classes=5):
     else:
         raise ValueError(f"num_classes must be 5 or 7, got {num_classes}")
 
+def binaryMasksToRGB(masks, num_classes=5):
+    """
+    Convert binary masks to a single RGB image using the SUIM color encoding
+    
+    Args:
+        masks: numpy array or torch tensor
+            - For 5 classes: (5, H, W) with order [RO, FV, HD, RI, WR]
+            - For 7 classes: (7, H, W) with order [HD, PF, WR, RO, RI, FV, SR]
+        num_classes: Number of classes (5 or 7)
+    
+    Returns:
+        RGB image as numpy array (H, W, 3) with uint8 values
+    
+    Color encoding:
+        5 classes:
+            RO (Robots) - Red (255, 0, 0)
+            FV (Fish/vertebrates) - Yellow (255, 255, 0)
+            HD (Human divers) - Blue (0, 0, 255)
+            RI (Reefs/invertebrates) - Magenta (255, 0, 255)
+            WR (Wrecks/ruins) - Cyan (0, 255, 255)
+        7 classes:
+            HD (Human divers) - Blue (0, 0, 255)
+            PF (Plants/sea-grass) - Green (0, 255, 0)
+            WR (Wrecks/ruins) - Cyan (0, 255, 255)
+            RO (Robots) - Red (255, 0, 0)
+            RI (Reefs/invertebrates) - Magenta (255, 0, 255)
+            FV (Fish/vertebrates) - Yellow (255, 255, 0)
+            SR (Sand/sea-floor) - White (255, 255, 255)
+        Background - Black (0, 0, 0)
+    """
+    # Convert to numpy if torch tensor
+    if hasattr(masks, 'cpu'):
+        masks = masks.cpu().numpy()
+    
+    if num_classes == 5:
+        # Order: RO, FV, HD, RI, WR
+        RO, FV, HD, RI, WR = masks[0], masks[1], masks[2], masks[3], masks[4]
+        h, w = RO.shape
+        rgb_mask = np.zeros((h, w, 3), dtype=np.uint8)
+        
+        # Apply colors with priority (later ones override earlier ones where they overlap)
+        rgb_mask[RO > 0] = [255, 0, 0]      # Red
+        rgb_mask[FV > 0] = [255, 255, 0]    # Yellow
+        rgb_mask[HD > 0] = [0, 0, 255]      # Blue
+        rgb_mask[RI > 0] = [255, 0, 255]    # Magenta
+        rgb_mask[WR > 0] = [0, 255, 255]    # Cyan
+        
+        return rgb_mask
+    
+    elif num_classes == 7:
+        # Order: HD, PF, WR, RO, RI, FV, SR
+        HD, PF, WR, RO, RI, FV, SR = masks[0], masks[1], masks[2], masks[3], masks[4], masks[5], masks[6]
+        h, w = HD.shape
+        rgb_mask = np.zeros((h, w, 3), dtype=np.uint8)
+        
+        # Apply colors with priority (later ones override earlier ones where they overlap)
+        rgb_mask[HD > 0] = [0, 0, 255]      # Blue
+        rgb_mask[PF > 0] = [0, 255, 0]      # Green
+        rgb_mask[WR > 0] = [0, 255, 255]    # Cyan
+        rgb_mask[RO > 0] = [255, 0, 0]      # Red
+        rgb_mask[RI > 0] = [255, 0, 255]    # Magenta
+        rgb_mask[FV > 0] = [255, 255, 0]    # Yellow
+        rgb_mask[SR > 0] = [255, 255, 255]  # White
+        
+        return rgb_mask
+    
+    else:
+        raise ValueError(f"num_classes must be 5 or 7, got {num_classes}")
+
+
 class SUIMDataset(Dataset):
     """
     PyTorch Dataset for SUIM with data augmentation

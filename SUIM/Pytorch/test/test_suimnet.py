@@ -1,8 +1,4 @@
-"""
-# Test script for SUIM-Net PyTorch
-    # for 5 object categories: HD, FV, RO, RI, WR 
-# Paper: https://arxiv.org/pdf/2004.01241.pdf  
-"""
+
 from __future__ import print_function, division
 import os
 import ntpath
@@ -25,13 +21,13 @@ from utils.data_utils import SUIMDataset, binaryMasksToRGB
 
 ## CONFIGURATION ##
 test_dir = "SUIM/TEST/images/"
-ckpt_dir = "SUIM/Pytorch/ckpt_RSB_Noaug2/"
+ckpt_dir = "SUIM/Pytorch/ckpt_swin_7classes/"
 ## sample and ckpt dir
-samples_dir = "SUIM/TEST/Output_TESTEnovocodigo/"
+samples_dir = "SUIM/Pytorch/ckpt_swin_7classes/Output/"
     
 ## input/output shapes
-base_ = 'RSB' # 'RSB', 'VGG', or 'SWIN'
-num_classes = 5  # 5 or 7 classes
+base_ = 'SWIN' # 'RSB', 'VGG', or 'SWIN'
+num_classes = 7  # 5 or 7 classes
 
 ## CONFIGURATION ##
 if base_=='RSB':
@@ -39,7 +35,7 @@ if base_=='RSB':
     ckpt_name = "suimnet_rsb_epoch_70.pth"
 elif base_=='SWIN':
     im_res_ = (256, 256, 3)
-    ckpt_name = "suimnet_swin_epoch_64.pth"
+    ckpt_name = "suimnet_swin_best.pth"
 else: 
     im_res_ = (320, 256, 3)
     ckpt_name = "suimnet_vgg_best.pth"
