@@ -1,17 +1,13 @@
-"""
-# Data utility functions for training on the SUIM dataset
-# Paper: https://arxiv.org/pdf/2004.01241.pdf  
-"""
-from __future__ import print_function
-from tensorflow.keras.preprocessing.image import ImageDataGenerator
-import numpy as np 
+
 import os
 import fnmatch
+import numpy as np
+from PIL import Image
 
 """
-RGB color code and object categories:
+RGB color code and object categories:    Cada pixel da máscara é uma cor RGB, mas aqui os canais são 0 ou 1
 ------------------------------------
-000 BW: Background waterbody
+000 BW: Background waterbody (não incluído - tudo que não é classe)
 001 HD: Human divers
 010 PF: Plants/sea-grass
 011 WR: Wrecks/ruins
@@ -20,149 +16,80 @@ RGB color code and object categories:
 110 FV: Fish and vertebrates
 111 SR: Sand/sea-floor (& rocks)
 """
-def getRobotFishHumanReefWrecks(mask):
-    # for categories: HD, RO, FV, WR, RI
+
+
+def getRobotFishHumanReefWrecks(mask, num_classes=5):
+    """
+    Extract binary masks from RGB mask
+    
+    Args:
+        mask: RGB mask array (H, W, 3) with values 0 or 1
+        num_classes: Number of classes to extract (5 or 7)
+            - 5 classes: RO, FV, HD, RI, WR (original SUIM-Net)
+            - 7 classes: HD, PF, WR, RO, RI, FV, SR (all categories except background)
+    
+    Returns:
+        numpy array of shape (num_classes, H, W)
+    """
     imw, imh = mask.shape[0], mask.shape[1]
-    Human = np.zeros((imw, imh))
-    Robot = np.zeros((imw, imh))
-    Fish = np.zeros((imw, imh))
-    Reef = np.zeros((imw, imh))
-    Wreck = np.zeros((imw, imh))
-    for i in range(imw):
-        for j in range(imh):
-            if (mask[i,j,0]==0 and mask[i,j,1]==0 and mask[i,j,2]==1):
-                Human[i, j] = 1 
-            elif (mask[i,j,0]==1 and mask[i,j,1]==0 and mask[i,j,2]==0):
-                Robot[i, j] = 1  
-            elif (mask[i,j,0]==1 and mask[i,j,1]==1 and mask[i,j,2]==0):
-                Fish[i, j] = 1  
-            elif (mask[i,j,0]==1 and mask[i,j,1]==0 and mask[i,j,2]==1):
-                Reef[i, j] = 1  
-            elif (mask[i,j,0]==0 and mask[i,j,1]==1 and mask[i,j,2]==1):
-                Wreck[i, j] = 1  
-            else: pass
-    return np.stack((Robot, Fish, Human, Reef, Wreck), -1) 
-
-
-def getRobotFishHumanWrecks(mask):
-    # for categories: HD, RO, FV, WR
-    imw, imh = mask.shape[0], mask.shape[1]
-    Human = np.zeros((imw, imh))
-    Robot = np.zeros((imw, imh))
-    Fish = np.zeros((imw, imh))
-    Wreck = np.zeros((imw, imh))
-    for i in range(imw):
-        for j in range(imh):
-            if (mask[i,j,0]==0 and mask[i,j,1]==0 and mask[i,j,2]==1):
-                Human[i, j] = 1 
-            elif (mask[i,j,0]==1 and mask[i,j,1]==0 and mask[i,j,2]==0):
-                Robot[i, j] = 1  
-            elif (mask[i,j,0]==1 and mask[i,j,1]==1 and mask[i,j,2]==0):
-                Fish[i, j] = 1  
-            elif (mask[i,j,0]==0 and mask[i,j,1]==1 and mask[i,j,2]==1):
-                Wreck[i, j] = 1  
-            else: pass
-    return np.stack((Robot, Fish, Human, Wreck), -1) 
-
-
-def getSaliency(mask):
-    # one combined category: HD/RO/FV/WR
-    imw, imh = mask.shape[0], mask.shape[1]
-    sal = np.zeros((imw, imh))
-    for i in range(imw):
-        for j in range(imh):
-            if (mask[i,j,0]==0 and mask[i,j,1]==0 and mask[i,j,2]==1):
-                sal[i, j] = 1 
-            elif (mask[i,j,0]==1 and mask[i,j,1]==0 and mask[i,j,2]==0):
-                sal[i, j] = 1  
-            elif (mask[i,j,0]==1 and mask[i,j,1]==1 and mask[i,j,2]==0):
-                sal[i, j] = 1   
-            elif (mask[i,j,0]==0 and mask[i,j,1]==1 and mask[i,j,2]==1):
-                sal[i, j] = 0.8  
-            else: pass
-    return np.expand_dims(sal, axis=-1) 
-
-
-def processSUIMDataRFHW(img, mask, sal=False):
-    # scaling image data and masks
-    img = img / 255
-    mask = mask /255
-    mask[mask > 0.5] = 1
-    mask[mask <= 0.5] = 0
-    m = []
-    for i in range(mask.shape[0]):
-        if sal:
-            m.append(getSaliency(mask[i]))
-        else:
-            m.append(getRobotFishHumanReefWrecks(mask[i]))
-            #m.append(getRobotFishHumanWrecks(mask[i]))
-    m = np.array(m)
-    return (img, m)
-
-
-def trainDataGenerator(batch_size, train_path, image_folder, mask_folder, aug_dict, image_color_mode="grayscale",
-                    mask_color_mode="grayscale", target_size=(256,256), sal=False):
-    # data generator function for driving the training
-    from tensorflow.keras.preprocessing import image as keras_image
-    import glob
     
-    # Get all image paths
-    image_dir = os.path.join(train_path, image_folder)
-    mask_dir = os.path.join(train_path, mask_folder)
-    image_paths = sorted(glob.glob(os.path.join(image_dir, '*.*')))
+    if num_classes == 5:
+        # Original 5 classes: RO, FV, HD, RI, WR
+        Human = np.zeros((imw, imh), dtype=np.float32)
+        Robot = np.zeros((imw, imh), dtype=np.float32)
+        Fish = np.zeros((imw, imh), dtype=np.float32)
+        Reef = np.zeros((imw, imh), dtype=np.float32)
+        Wreck = np.zeros((imw, imh), dtype=np.float32)
+        
+        for i in range(imw):
+            for j in range(imh):
+                if mask[i,j,0]==0 and mask[i,j,1]==0 and mask[i,j,2]==1:      # Blue (001)
+                    Human[i, j] = 1.0
+                elif mask[i,j,0]==1 and mask[i,j,1]==0 and mask[i,j,2]==0:    # Red (100)
+                    Robot[i, j] = 1.0
+                elif mask[i,j,0]==1 and mask[i,j,1]==1 and mask[i,j,2]==0:    # Yellow (110)
+                    Fish[i, j] = 1.0
+                elif mask[i,j,0]==1 and mask[i,j,1]==0 and mask[i,j,2]==1:    # Magenta (101)
+                    Reef[i, j] = 1.0
+                elif mask[i,j,0]==0 and mask[i,j,1]==1 and mask[i,j,2]==1:    # Cyan (011)
+                    Wreck[i, j] = 1.0
+        
+        # Stack as (5, H, W) for PyTorch: RO, FV, HD, RI, WR
+        return np.stack((Robot, Fish, Human, Reef, Wreck), axis=0)
     
-    if len(image_paths) == 0:
-        raise ValueError(f"No images found in {image_dir}. Check if the path is correct.")
+    elif num_classes == 7:
+        # All 7 classes (excluding background): HD, PF, WR, RO, RI, FV, SR
+        Human = np.zeros((imw, imh), dtype=np.float32)
+        Plants = np.zeros((imw, imh), dtype=np.float32)
+        Wreck = np.zeros((imw, imh), dtype=np.float32)
+        Robot = np.zeros((imw, imh), dtype=np.float32)
+        Reef = np.zeros((imw, imh), dtype=np.float32)
+        Fish = np.zeros((imw, imh), dtype=np.float32)
+        Sand = np.zeros((imw, imh), dtype=np.float32)
+        
+        for i in range(imw):
+            for j in range(imh):
+                if mask[i,j,0]==0 and mask[i,j,1]==0 and mask[i,j,2]==1:      # Blue (001) - Human
+                    Human[i, j] = 1.0
+                elif mask[i,j,0]==0 and mask[i,j,1]==1 and mask[i,j,2]==0:    # Green (010) - Plants
+                    Plants[i, j] = 1.0
+                elif mask[i,j,0]==0 and mask[i,j,1]==1 and mask[i,j,2]==1:    # Cyan (011) - Wreck
+                    Wreck[i, j] = 1.0
+                elif mask[i,j,0]==1 and mask[i,j,1]==0 and mask[i,j,2]==0:    # Red (100) - Robot
+                    Robot[i, j] = 1.0
+                elif mask[i,j,0]==1 and mask[i,j,1]==0 and mask[i,j,2]==1:    # Magenta (101) - Reef
+                    Reef[i, j] = 1.0
+                elif mask[i,j,0]==1 and mask[i,j,1]==1 and mask[i,j,2]==0:    # Yellow (110) - Fish
+                    Fish[i, j] = 1.0
+                elif mask[i,j,0]==1 and mask[i,j,1]==1 and mask[i,j,2]==1:    # White (111) - Sand
+                    Sand[i, j] = 1.0
+                # Black (000) is background - not included
+        
+        # Stack as (7, H, W) for PyTorch: HD, PF, WR, RO, RI, FV, SR
+        return np.stack((Human, Plants, Wreck, Robot, Reef, Fish, Sand), axis=0)
     
-    image_datagen = ImageDataGenerator(**aug_dict)
-    mask_datagen = ImageDataGenerator(**aug_dict)
-    
-    idx = 0
-    while True:
-        batch_images = []
-        batch_masks = []
-        
-        for _ in range(batch_size):
-            if idx >= len(image_paths):
-                idx = 0
-                
-            img_path = image_paths[idx]
-            img_name = os.path.basename(img_path)
-            # Change extension to .bmp for mask
-            mask_name = os.path.splitext(img_name)[0] + '.bmp'
-            mask_path = os.path.join(mask_dir, mask_name)
-            
-            # Load image
-            if image_color_mode == "rgb":
-                img = keras_image.load_img(img_path, target_size=target_size, color_mode='rgb')
-            else:
-                img = keras_image.load_img(img_path, target_size=target_size, color_mode='grayscale')
-            img = keras_image.img_to_array(img)
-            
-            # Load mask
-            if mask_color_mode == "rgb":
-                mask = keras_image.load_img(mask_path, target_size=target_size, color_mode='rgb')
-            else:
-                mask = keras_image.load_img(mask_path, target_size=target_size, color_mode='grayscale')
-            mask = keras_image.img_to_array(mask)
-            
-            batch_images.append(img)
-            batch_masks.append(mask)
-            idx += 1
-            
-        batch_images = np.array(batch_images)
-        batch_masks = np.array(batch_masks)
-        
-        # Apply augmentation with same seed
-        seed = np.random.randint(0, 10000)
-        batch_images = next(image_datagen.flow(batch_images, batch_size=batch_size, seed=seed, shuffle=False))
-        batch_masks = next(mask_datagen.flow(batch_masks, batch_size=batch_size, seed=seed, shuffle=False))
-        
-        # Process the data
-        batch_images, batch_masks = processSUIMDataRFHW(batch_images, batch_masks, sal)
-        
-        yield (batch_images, batch_masks)
-
+    else:
+        raise ValueError(f"num_classes must be 5 or 7, got {num_classes}")
 
 def getPaths(data_dir):
     # read image files from directory
@@ -177,32 +104,73 @@ def getPaths(data_dir):
     return sorted(list(set(image_paths)))
 
 
-def binaryMasksToRGB(RO, FV, HD, RI, WR):
+def binaryMasksToRGB(masks, num_classes=5):
     """
-    Convert 5 binary masks to a single RGB image using the SUIM color encoding:
-    RO (Robots) - Red (255, 0, 0)
-    FV (Fish/vertebrates) - Yellow (255, 255, 0)
-    HD (Human divers) - Blue (0, 0, 255)
-    RI (Reefs/invertebrates) - Magenta (255, 0, 255)
-    WR (Wrecks/ruins) - Cyan (0, 255, 255)
-    Background - Black (0, 0, 0)
+    Convert binary masks to a single RGB image using the SUIM color encoding
+    
+    Args:
+        masks: numpy array or torch tensor
+            - For 5 classes: (5, H, W) with order [RO, FV, HD, RI, WR]
+            - For 7 classes: (7, H, W) with order [HD, PF, WR, RO, RI, FV, SR]
+        num_classes: Number of classes (5 or 7)
+    
+    Returns:
+        RGB image as numpy array (H, W, 3) with uint8 values
+    
+    Color encoding:
+        5 classes:
+            RO (Robots) - Red (255, 0, 0)
+            FV (Fish/vertebrates) - Yellow (255, 255, 0)
+            HD (Human divers) - Blue (0, 0, 255)
+            RI (Reefs/invertebrates) - Magenta (255, 0, 255)
+            WR (Wrecks/ruins) - Cyan (0, 255, 255)
+        7 classes:
+            HD (Human divers) - Blue (0, 0, 255)
+            PF (Plants/sea-grass) - Green (0, 255, 0)
+            WR (Wrecks/ruins) - Cyan (0, 255, 255)
+            RO (Robots) - Red (255, 0, 0)
+            RI (Reefs/invertebrates) - Magenta (255, 0, 255)
+            FV (Fish/vertebrates) - Yellow (255, 255, 0)
+            SR (Sand/sea-floor) - White (255, 255, 255)
+        Background - Black (0, 0, 0)
     """
-    h, w = RO.shape
-    rgb_mask = np.zeros((h, w, 3), dtype=np.uint8)
+    # Convert to numpy if torch tensor
+    if hasattr(masks, 'cpu'):
+        masks = masks.cpu().numpy()
     
-    # Apply colors with priority (later ones override earlier ones where they overlap)
-    # RO - Red
-    rgb_mask[RO > 0] = [255, 0, 0]
-    # FV - Yellow
-    rgb_mask[FV > 0] = [255, 255, 0]
-    # HD - Blue
-    rgb_mask[HD > 0] = [0, 0, 255]
-    # RI - Magenta
-    rgb_mask[RI > 0] = [255, 0, 255]
-    # WR - Cyan
-    rgb_mask[WR > 0] = [0, 255, 255]
+    if num_classes == 5:
+        # Order: RO, FV, HD, RI, WR
+        RO, FV, HD, RI, WR = masks[0], masks[1], masks[2], masks[3], masks[4]
+        h, w = RO.shape
+        rgb_mask = np.zeros((h, w, 3), dtype=np.uint8)
+        
+        # Apply colors with priority (later ones override earlier ones where they overlap)
+        rgb_mask[RO > 0] = [255, 0, 0]      # Red
+        rgb_mask[FV > 0] = [255, 255, 0]    # Yellow
+        rgb_mask[HD > 0] = [0, 0, 255]      # Blue
+        rgb_mask[RI > 0] = [255, 0, 255]    # Magenta
+        rgb_mask[WR > 0] = [0, 255, 255]    # Cyan
+        
+        return rgb_mask
     
-    return rgb_mask
-
+    elif num_classes == 7:
+        # Order: HD, PF, WR, RO, RI, FV, SR
+        HD, PF, WR, RO, RI, FV, SR = masks[0], masks[1], masks[2], masks[3], masks[4], masks[5], masks[6]
+        h, w = HD.shape
+        rgb_mask = np.zeros((h, w, 3), dtype=np.uint8)
+        
+        # Apply colors with priority (later ones override earlier ones where they overlap)
+        rgb_mask[HD > 0] = [0, 0, 255]      # Blue
+        rgb_mask[PF > 0] = [0, 255, 0]      # Green
+        rgb_mask[WR > 0] = [0, 255, 255]    # Cyan
+        rgb_mask[RO > 0] = [255, 0, 0]      # Red
+        rgb_mask[RI > 0] = [255, 0, 255]    # Magenta
+        rgb_mask[FV > 0] = [255, 255, 0]    # Yellow
+        rgb_mask[SR > 0] = [255, 255, 255]  # White
+        
+        return rgb_mask
+    
+    else:
+        raise ValueError(f"num_classes must be 5 or 7, got {num_classes}")
 
 

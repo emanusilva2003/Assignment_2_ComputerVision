@@ -1,6 +1,4 @@
-"""
-Thanks to https://github.com/fperazzi/davis
-"""
+
 from math import floor
 import numpy as np
 from skimage.morphology import binary_dilation,disk

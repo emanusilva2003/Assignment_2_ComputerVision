@@ -2,7 +2,7 @@
 
 This repository contains implementations and experiments for underwater image semantic segmentation using the SUIM-Net architecture. The project is based on the paper [Semantic Segmentation of Underwater Imagery: Dataset and Benchmark](https://arxiv.org/pdf/2004.01241.pdf) (IROS 2020) and includes both PyTorch and Keras implementations with multiple backbone architectures.
 
-##  Table of Contents
+## Table of Contents
 - [Overview](#overview)
 - [Dataset](#dataset)
 - [Models](#models)
@@ -12,7 +12,7 @@ This repository contains implementations and experiments for underwater image se
 - [Results](#results)
 - [References](#references)
 
-##  Overview
+## Overview
 
 SUIM-Net is a fully-convolutional encoder-decoder network designed for semantic segmentation of natural underwater images. This project explores different backbone architectures and data augmentation strategies to improve segmentation performance.
 
@@ -28,7 +28,7 @@ The model segments underwater images into the following classes:
 - **FV**: Fish and vertebrates
 - **SR**: Sea-floor/rocks
 
-##  Dataset
+## Dataset
 
 **SUIM Dataset** (Segmentation of Underwater IMagery):
 - 1,525 annotated images for training/validation
@@ -36,7 +36,7 @@ The model segments underwater images into the following classes:
 - Multiple object categories for semantic segmentation
 - Dataset available at: [SUIM Dataset](http://irvlab.cs.umn.edu/resources/suim-dataset)
 
-##  Models
+## Models
 
 This project implements SUIM-Net with three different backbone architectures:
 
@@ -72,9 +72,9 @@ Assignment_2/
 ├── visualizemasks.py                  # Visualization script for comparing model outputs
 │
 ├── SUIM/                              # Main SUIM implementation directory
-│   ├── README.md                      # Original SUIM paper README
 │   │
 │   ├── Paper/                         # Keras/TensorFlow implementation (from paper)
+│   │   ├── README.md                  # Original SUIM paper README
 │   │   ├── train_suimnet.py          # Training script
 │   │   ├── test_suimnet.py           # Testing script
 │   │   ├── models/                    # Keras model definitions
@@ -90,7 +90,8 @@ Assignment_2/
 │   │   ├── train_suimnet_colab.ipynb # Training notebook for Google Colab
 │   │   ├── models/                    # PyTorch model definitions
 │   │   │   ├── suim_net.py           # RSB and VGG variants
-│   │   │   └── suim_net_swin.py      # Swin Transformer variant
+│   │   │   ├── suim_net_swin.py      # Swin Transformer variant
+│   │   │   └── suim_net_swin_PPM.py  # Swin with Pyramid Pooling Module
 │   │   ├── utils/                     # Data utilities
 │   │   │   └── data_utils.py
 │   │   ├── test/                      # Testing scripts
@@ -118,9 +119,6 @@ Assignment_2/
 │       ├── get_f1_iou.py             # Performance evaluation metrics
 │       └── measure_utils.py           # Measurement utilities
 ```
-##  Usage
-
-### Training
 
 #### PyTorch (Recommended)
 ```bash
@@ -163,15 +161,13 @@ This script generates a grid visualization comparing:
 ### Evaluation
 
 Compute F1 scores and IoU metrics:
+- **F-score**: Region similarity measure
+- **mIOU**: Mean Intersection over Union for contour accuracy
 
 ```bash
 cd SUIM/utils
 python get_f1_iou.py
 ```
-### Evaluation Metrics
-- **F-score**: Region similarity measure
-- **mIOU**: Mean Intersection over Union for contour accuracy
-
 Output predictions for each model are stored in their respective `Output/` directories, organized by segmentation category.
 
 ## References
@@ -190,6 +186,7 @@ Output predictions for each model are stored in their respective `Output/` direc
 
 ### Links
 - **Paper**: [ArXiv](https://arxiv.org/pdf/2004.01241.pdf)
+- **Virtual Talk**: [YouTube](https://youtu.be/LxWrhVeIkdg)
 - **Dataset**: [SUIM Dataset](http://irvlab.cs.umn.edu/resources/suim-dataset)
 - **Original Repository**: [SUIM-dev](https://github.com/xahidbuffon/SUIM)
 
