@@ -11,6 +11,79 @@ import random
 import os
 import fnmatch
 
+def getRobotFishHumanReefWrecks(mask, num_classes=5):
+    """
+    Extract binary masks from RGB mask
+    
+    Args:
+        mask: RGB mask array (H, W, 3) with values 0 or 1
+        num_classes: Number of classes to extract (5 or 7)
+            - 5 classes: RO, FV, HD, RI, WR (original SUIM-Net)
+            - 7 classes: HD, PF, WR, RO, RI, FV, SR (all categories except background)
+    
+    Returns:
+        numpy array of shape (num_classes, H, W)
+    """
+    imw, imh = mask.shape[0], mask.shape[1]
+    
+    if num_classes == 5:
+        # Original 5 classes: RO, FV, HD, RI, WR
+        Human = np.zeros((imw, imh), dtype=np.float32)
+        Robot = np.zeros((imw, imh), dtype=np.float32)
+        Fish = np.zeros((imw, imh), dtype=np.float32)
+        Reef = np.zeros((imw, imh), dtype=np.float32)
+        Wreck = np.zeros((imw, imh), dtype=np.float32)
+        
+        for i in range(imw):
+            for j in range(imh):
+                if mask[i,j,0]==0 and mask[i,j,1]==0 and mask[i,j,2]==1:      # Blue (001)
+                    Human[i, j] = 1.0
+                elif mask[i,j,0]==1 and mask[i,j,1]==0 and mask[i,j,2]==0:    # Red (100)
+                    Robot[i, j] = 1.0
+                elif mask[i,j,0]==1 and mask[i,j,1]==1 and mask[i,j,2]==0:    # Yellow (110)
+                    Fish[i, j] = 1.0
+                elif mask[i,j,0]==1 and mask[i,j,1]==0 and mask[i,j,2]==1:    # Magenta (101)
+                    Reef[i, j] = 1.0
+                elif mask[i,j,0]==0 and mask[i,j,1]==1 and mask[i,j,2]==1:    # Cyan (011)
+                    Wreck[i, j] = 1.0
+        
+        # Stack as (5, H, W) for PyTorch: RO, FV, HD, RI, WR
+        return np.stack((Robot, Fish, Human, Reef, Wreck), axis=0)
+    
+    elif num_classes == 7:
+        # All 7 classes (excluding background): HD, PF, WR, RO, RI, FV, SR
+        Human = np.zeros((imw, imh), dtype=np.float32)
+        Plants = np.zeros((imw, imh), dtype=np.float32)
+        Wreck = np.zeros((imw, imh), dtype=np.float32)
+        Robot = np.zeros((imw, imh), dtype=np.float32)
+        Reef = np.zeros((imw, imh), dtype=np.float32)
+        Fish = np.zeros((imw, imh), dtype=np.float32)
+        Sand = np.zeros((imw, imh), dtype=np.float32)
+        
+        for i in range(imw):
+            for j in range(imh):
+                if mask[i,j,0]==0 and mask[i,j,1]==0 and mask[i,j,2]==1:      # Blue (001) - Human
+                    Human[i, j] = 1.0
+                elif mask[i,j,0]==0 and mask[i,j,1]==1 and mask[i,j,2]==0:    # Green (010) - Plants
+                    Plants[i, j] = 1.0
+                elif mask[i,j,0]==0 and mask[i,j,1]==1 and mask[i,j,2]==1:    # Cyan (011) - Wreck
+                    Wreck[i, j] = 1.0
+                elif mask[i,j,0]==1 and mask[i,j,1]==0 and mask[i,j,2]==0:    # Red (100) - Robot
+                    Robot[i, j] = 1.0
+                elif mask[i,j,0]==1 and mask[i,j,1]==0 and mask[i,j,2]==1:    # Magenta (101) - Reef
+                    Reef[i, j] = 1.0
+                elif mask[i,j,0]==1 and mask[i,j,1]==1 and mask[i,j,2]==0:    # Yellow (110) - Fish
+                    Fish[i, j] = 1.0
+                elif mask[i,j,0]==1 and mask[i,j,1]==1 and mask[i,j,2]==1:    # White (111) - Sand
+                    Sand[i, j] = 1.0
+                # Black (000) is background - not included
+        
+        # Stack as (7, H, W) for PyTorch: HD, PF, WR, RO, RI, FV, SR
+        return np.stack((Human, Plants, Wreck, Robot, Reef, Fish, Sand), axis=0)
+    
+    else:
+        raise ValueError(f"num_classes must be 5 or 7, got {num_classes}")
+
 class SUIMDataset(Dataset):
     """
     PyTorch Dataset for SUIM with data augmentation
