@@ -12,20 +12,19 @@ from os.path import exists
 # local libs
 from utils.data_utils import getPaths
 from utils.measure_utils import db_eval_boundary, IoU_bin
+import matplotlib.pyplot as plt
 
 ## Configuration
-model_name = "SUIM-Net_SWIN_PPM_NOAUG"  # Change this for different models
+model_name = "SUIM-Net_RSB_noAug"  # Change this for different models
 test_dir = "SUIM/TEST/masks/"
-gen_base_dir = "SUIM/TEST/Output_SWIN_PPM/"
+gen_base_dir = "SUIM/TEST/Output_RSB_Noaug2_/"
 output_excel = "SUIM/TEST/evaluation_results.xlsx"
+## input/output shapes
+im_res = (320, 256) # VGG E RSB
+#im_res = (256, 256) # SWIN
 
 ## Categories to evaluate
 categories = ["HD", "WR", "RO", "RI", "FV"]
-
-## input/output shapes
-
-# im_res = (320, 256) # VGG E RSB
-im_res = (256, 256) # SWIN
 
 # for reading and scaling input images
 def read_and_bin(im_path):
@@ -54,6 +53,19 @@ def evaluate_category(category):
     
     for gen_p, real_p in zip(gen_paths, real_paths):
         gen, real = read_and_bin(gen_p), read_and_bin(real_p)
+        
+        """
+        # Print the two images for visual inspection
+        fig, axs = plt.subplots(1, 2, figsize=(8, 4))
+        axs[0].imshow(real, cmap='gray')
+        axs[0].set_title('Real')
+        axs[0].axis('off')
+        axs[1].imshow(gen, cmap='gray')
+        axs[1].set_title('Generated')
+        axs[1].axis('off')
+        plt.show()
+        """
+
         if (np.sum(real)>0):
             precision, recall, F1 = db_eval_boundary(real, gen)
             iou = IoU_bin(real, gen)

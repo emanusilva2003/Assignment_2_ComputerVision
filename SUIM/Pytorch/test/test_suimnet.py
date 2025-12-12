@@ -23,43 +23,64 @@ sys.path.append(parent_dir)
 from models.suim_net import SUIM_Net
 from utils.data_utils import SUIMDataset, binaryMasksToRGB
 
-## experiment directories - Change these paths as needed
-#test_dir = "/mnt/data1/ImageSeg/suim/TEST/images/"
+## CONFIGURATION ##
 test_dir = "SUIM/TEST/images/"
-ckpt_dir = "SUIM/Pytorch/ckptswin_PPM/"
+ckpt_dir = "SUIM/Pytorch/ckpt_RSB_Noaug2/"
 ## sample and ckpt dir
-samples_dir = "SUIM/TEST/Output_SWIN_PPM/"
+samples_dir = "SUIM/TEST/Output_TESTEnovocodigo/"
     
 ## input/output shapes
-base_ = 'SWIN_PPM' # 'RSB', 'VGG', or 'SWIN' or 'SWIN_PPM'
+base_ = 'RSB' # 'RSB', 'VGG', or 'SWIN'
+num_classes = 5  # 5 or 7 classes
+
+## CONFIGURATION ##
 if base_=='RSB':
     im_res_ = (320, 256, 3) 
-    ckpt_name = "suimnet_rsb_epoch_38.pth"
+    ckpt_name = "suimnet_rsb_epoch_70.pth"
 elif base_=='SWIN':
     im_res_ = (256, 256, 3)
-    ckpt_name = "suimnet_swin_best.pth"
-elif base_=='SWIN_PPM':
-    im_res_ = (256, 256, 3)
-    ckpt_name = "suimnet_swin_ppm_best.pth"
+    ckpt_name = "suimnet_swin_epoch_64.pth"
 else: 
     im_res_ = (320, 256, 3)
     ckpt_name = "suimnet_vgg_best.pth"
 
 
-RO_dir = samples_dir + "RO/"
-FB_dir = samples_dir + "FV/"
-WR_dir = samples_dir + "WR/"
-HD_dir = samples_dir + "HD/"
-RI_dir = samples_dir + "RI/"
-RGB_dir = samples_dir + "RGB/"
-
-if not exists(samples_dir): os.makedirs(samples_dir)
-if not exists(RO_dir): os.makedirs(RO_dir)
-if not exists(FB_dir): os.makedirs(FB_dir)
-if not exists(WR_dir): os.makedirs(WR_dir)
-if not exists(HD_dir): os.makedirs(HD_dir)
-if not exists(RI_dir): os.makedirs(RI_dir)
-if not exists(RGB_dir): os.makedirs(RGB_dir)
+if num_classes == 5:
+    # 5 classes: RO, FV, HD, RI, WR
+    RO_dir = samples_dir + "RO/"
+    FB_dir = samples_dir + "FV/"
+    WR_dir = samples_dir + "WR/"
+    HD_dir = samples_dir + "HD/"
+    RI_dir = samples_dir + "RI/"
+    RGB_dir = samples_dir + "RGB/"
+    
+    if not exists(samples_dir): os.makedirs(samples_dir)
+    if not exists(RO_dir): os.makedirs(RO_dir)
+    if not exists(FB_dir): os.makedirs(FB_dir)
+    if not exists(WR_dir): os.makedirs(WR_dir)
+    if not exists(HD_dir): os.makedirs(HD_dir)
+    if not exists(RI_dir): os.makedirs(RI_dir)
+    if not exists(RGB_dir): os.makedirs(RGB_dir)
+elif num_classes == 7:
+    # 7 classes: HD, PF, WR, RO, RI, FV, SR
+    HD_dir = samples_dir + "HD/"
+    PF_dir = samples_dir + "PF/"
+    WR_dir = samples_dir + "WR/"
+    RO_dir = samples_dir + "RO/"
+    RI_dir = samples_dir + "RI/"
+    FB_dir = samples_dir + "FV/"
+    SR_dir = samples_dir + "SR/"
+    RGB_dir = samples_dir + "RGB/"
+    
+    if not exists(samples_dir): os.makedirs(samples_dir)
+    if not exists(HD_dir): os.makedirs(HD_dir)
+    if not exists(PF_dir): os.makedirs(PF_dir)
+    if not exists(WR_dir): os.makedirs(WR_dir)
+    if not exists(RO_dir): os.makedirs(RO_dir)
+    if not exists(RI_dir): os.makedirs(RI_dir)
+    if not exists(FB_dir): os.makedirs(FB_dir)
+    if not exists(SR_dir): os.makedirs(SR_dir)
+    if not exists(RGB_dir): os.makedirs(RGB_dir)
 
 ## Device configuration
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
@@ -77,7 +98,7 @@ else:
 print("="*60 + "\n")
 
 # Load model
-model = SUIM_Net(base=base_, n_classes=5, pretrained=False)
+model = SUIM_Net(base=base_, n_classes=num_classes, pretrained=False)
 checkpoint = torch.load(join(ckpt_dir, ckpt_name), map_location=device)
 model.load_state_dict(checkpoint['model_state_dict'])
 model = model.to(device)
@@ -150,21 +171,44 @@ def testGenerator():
             img_name = ntpath.basename(img_path[0]).split('.')[0] + '.bmp'
             print(f"Tested [{idx+1}/{len(test_dataset)}]: {ntpath.basename(img_path[0])} ({inference_time*1000:.1f}ms)")
             
-            # save individual output masks
-            ROs = out_img[:,:,0]
-            FVs = out_img[:,:,1]
-            HDs = out_img[:,:,2]
-            RIs = out_img[:,:,3]
-            WRs = out_img[:,:,4]
-            Image.fromarray(np.uint8(ROs*255.)).save(RO_dir+img_name)
-            Image.fromarray(np.uint8(FVs*255.)).save(FB_dir+img_name)
-            Image.fromarray(np.uint8(HDs*255.)).save(HD_dir+img_name)
-            Image.fromarray(np.uint8(RIs*255.)).save(RI_dir+img_name)
-            Image.fromarray(np.uint8(WRs*255.)).save(WR_dir+img_name)
+            # save individual output masks and RGB combined
+            if num_classes == 5:
+                # Order: RO, FV, HD, RI, WR
+                ROs = out_img[:,:,0]
+                FVs = out_img[:,:,1]
+                HDs = out_img[:,:,2]
+                RIs = out_img[:,:,3]
+                WRs = out_img[:,:,4]
+                Image.fromarray(np.uint8(ROs*255.)).save(RO_dir+img_name)
+                Image.fromarray(np.uint8(FVs*255.)).save(FB_dir+img_name)
+                Image.fromarray(np.uint8(HDs*255.)).save(HD_dir+img_name)
+                Image.fromarray(np.uint8(RIs*255.)).save(RI_dir+img_name)
+                Image.fromarray(np.uint8(WRs*255.)).save(WR_dir+img_name)
+                
+                # Create and save RGB combined mask
+                rgb_mask = binaryMasksToRGB(out_img.transpose(2, 0, 1), num_classes=5)
+                Image.fromarray(rgb_mask).save(RGB_dir+img_name)
             
-            # Create and save RGB combined mask
-            rgb_mask = binaryMasksToRGB(ROs, FVs, HDs, RIs, WRs)
-            Image.fromarray(rgb_mask).save(RGB_dir+img_name)
+            elif num_classes == 7:
+                # Order: HD, PF, WR, RO, RI, FV, SR
+                HDs = out_img[:,:,0]
+                PFs = out_img[:,:,1]
+                WRs = out_img[:,:,2]
+                ROs = out_img[:,:,3]
+                RIs = out_img[:,:,4]
+                FVs = out_img[:,:,5]
+                SRs = out_img[:,:,6]
+                Image.fromarray(np.uint8(HDs*255.)).save(HD_dir+img_name)
+                Image.fromarray(np.uint8(PFs*255.)).save(PF_dir+img_name)
+                Image.fromarray(np.uint8(WRs*255.)).save(WR_dir+img_name)
+                Image.fromarray(np.uint8(ROs*255.)).save(RO_dir+img_name)
+                Image.fromarray(np.uint8(RIs*255.)).save(RI_dir+img_name)
+                Image.fromarray(np.uint8(FVs*255.)).save(FB_dir+img_name)
+                Image.fromarray(np.uint8(SRs*255.)).save(SR_dir+img_name)
+                
+                # Create and save RGB combined mask
+                rgb_mask = binaryMasksToRGB(out_img.transpose(2, 0, 1), num_classes=7)
+                Image.fromarray(rgb_mask).save(RGB_dir+img_name)
     
     total_time = time.time() - start_time
     avg_inference_time = np.mean(inference_times)

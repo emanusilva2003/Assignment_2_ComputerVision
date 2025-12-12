@@ -358,7 +358,7 @@ if __name__ == "__main__":
     print(f"  Parameters: {total:,} total, {trainable:,} trainable")
     
     # Swin requires 256x256 input
-    x_swin = torch.randn(1, 3, 256, 320).to(device)
+    x_swin = torch.randn(1, 3, 256, 256).to(device)
     print("\nSwin Transformer Model:")
     out_swin = model_swin(x_swin)
     print(f"  Input shape: {x_swin.shape}")
@@ -366,9 +366,11 @@ if __name__ == "__main__":
     total, trainable = model_swin.count_parameters()
     print(f"  Parameters: {total:,} total, {trainable:,} trainable")
     
+    """
     print("\nSwin Transformer + PPM Model:")
     out_swin_ppm = model_swin_ppm(x_swin)
     print(f"  Input shape: {x_swin.shape}")
     print(f"  Output shape: {out_swin_ppm.shape}")
     total, trainable = model_swin_ppm.count_parameters()
     print(f"  Parameters: {total:,} total, {trainable:,} trainable")
+    """

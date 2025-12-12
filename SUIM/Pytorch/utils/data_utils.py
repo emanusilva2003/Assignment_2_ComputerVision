@@ -15,7 +15,7 @@ import random
 """
 RGB color code and object categories:    Cada pixel da máscara é uma cor RGB, mas aqui os canais são 0 ou 1
 ------------------------------------
-000 BW: Background waterbody               
+000 BW: Background waterbody (não incluído - tudo que não é classe)
 001 HD: Human divers
 010 PF: Plants/sea-grass
 011 WR: Wrecks/ruins
@@ -26,33 +26,78 @@ RGB color code and object categories:    Cada pixel da máscara é uma cor RGB, 
 """
 
 
-def getRobotFishHumanReefWrecks(mask):
+def getRobotFishHumanReefWrecks(mask, num_classes=5):
     """
-    Extract 5 binary masks from RGB mask
-    Categories: RO, FV, HD, RI, WR
+    Extract binary masks from RGB mask
+    
+    Args:
+        mask: RGB mask array (H, W, 3) with values 0 or 1
+        num_classes: Number of classes to extract (5 or 7)
+            - 5 classes: RO, FV, HD, RI, WR (original SUIM-Net)
+            - 7 classes: HD, PF, WR, RO, RI, FV, SR (all categories except background)
+    
+    Returns:
+        numpy array of shape (num_classes, H, W)
     """
     imw, imh = mask.shape[0], mask.shape[1]
-    Human = np.zeros((imw, imh), dtype=np.float32)
-    Robot = np.zeros((imw, imh), dtype=np.float32)
-    Fish = np.zeros((imw, imh), dtype=np.float32)
-    Reef = np.zeros((imw, imh), dtype=np.float32)
-    Wreck = np.zeros((imw, imh), dtype=np.float32)
     
-    for i in range(imw):
-        for j in range(imh):
-            if mask[i,j,0]==0 and mask[i,j,1]==0 and mask[i,j,2]==1:      # Blue
-                Human[i, j] = 1.0
-            elif mask[i,j,0]==1 and mask[i,j,1]==0 and mask[i,j,2]==0:    # Red
-                Robot[i, j] = 1.0
-            elif mask[i,j,0]==1 and mask[i,j,1]==1 and mask[i,j,2]==0:    # Yellow
-                Fish[i, j] = 1.0
-            elif mask[i,j,0]==1 and mask[i,j,1]==0 and mask[i,j,2]==1:    # Magenta (red + blue)
-                Reef[i, j] = 1.0
-            elif mask[i,j,0]==0 and mask[i,j,1]==1 and mask[i,j,2]==1:    # Cyan (green + blue)
-                Wreck[i, j] = 1.0
+    if num_classes == 5:
+        # Original 5 classes: RO, FV, HD, RI, WR
+        Human = np.zeros((imw, imh), dtype=np.float32)
+        Robot = np.zeros((imw, imh), dtype=np.float32)
+        Fish = np.zeros((imw, imh), dtype=np.float32)
+        Reef = np.zeros((imw, imh), dtype=np.float32)
+        Wreck = np.zeros((imw, imh), dtype=np.float32)
+        
+        for i in range(imw):
+            for j in range(imh):
+                if mask[i,j,0]==0 and mask[i,j,1]==0 and mask[i,j,2]==1:      # Blue (001)
+                    Human[i, j] = 1.0
+                elif mask[i,j,0]==1 and mask[i,j,1]==0 and mask[i,j,2]==0:    # Red (100)
+                    Robot[i, j] = 1.0
+                elif mask[i,j,0]==1 and mask[i,j,1]==1 and mask[i,j,2]==0:    # Yellow (110)
+                    Fish[i, j] = 1.0
+                elif mask[i,j,0]==1 and mask[i,j,1]==0 and mask[i,j,2]==1:    # Magenta (101)
+                    Reef[i, j] = 1.0
+                elif mask[i,j,0]==0 and mask[i,j,1]==1 and mask[i,j,2]==1:    # Cyan (011)
+                    Wreck[i, j] = 1.0
+        
+        # Stack as (5, H, W) for PyTorch: RO, FV, HD, RI, WR
+        return np.stack((Robot, Fish, Human, Reef, Wreck), axis=0)
     
-    # Stack as (5, H, W) for PyTorch
-    return np.stack((Robot, Fish, Human, Reef, Wreck), axis=0)
+    elif num_classes == 7:
+        # All 7 classes (excluding background): HD, PF, WR, RO, RI, FV, SR
+        Human = np.zeros((imw, imh), dtype=np.float32)
+        Plants = np.zeros((imw, imh), dtype=np.float32)
+        Wreck = np.zeros((imw, imh), dtype=np.float32)
+        Robot = np.zeros((imw, imh), dtype=np.float32)
+        Reef = np.zeros((imw, imh), dtype=np.float32)
+        Fish = np.zeros((imw, imh), dtype=np.float32)
+        Sand = np.zeros((imw, imh), dtype=np.float32)
+        
+        for i in range(imw):
+            for j in range(imh):
+                if mask[i,j,0]==0 and mask[i,j,1]==0 and mask[i,j,2]==1:      # Blue (001) - Human
+                    Human[i, j] = 1.0
+                elif mask[i,j,0]==0 and mask[i,j,1]==1 and mask[i,j,2]==0:    # Green (010) - Plants
+                    Plants[i, j] = 1.0
+                elif mask[i,j,0]==0 and mask[i,j,1]==1 and mask[i,j,2]==1:    # Cyan (011) - Wreck
+                    Wreck[i, j] = 1.0
+                elif mask[i,j,0]==1 and mask[i,j,1]==0 and mask[i,j,2]==0:    # Red (100) - Robot
+                    Robot[i, j] = 1.0
+                elif mask[i,j,0]==1 and mask[i,j,1]==0 and mask[i,j,2]==1:    # Magenta (101) - Reef
+                    Reef[i, j] = 1.0
+                elif mask[i,j,0]==1 and mask[i,j,1]==1 and mask[i,j,2]==0:    # Yellow (110) - Fish
+                    Fish[i, j] = 1.0
+                elif mask[i,j,0]==1 and mask[i,j,1]==1 and mask[i,j,2]==1:    # White (111) - Sand
+                    Sand[i, j] = 1.0
+                # Black (000) is background - not included
+        
+        # Stack as (7, H, W) for PyTorch: HD, PF, WR, RO, RI, FV, SR
+        return np.stack((Human, Plants, Wreck, Robot, Reef, Fish, Sand), axis=0)
+    
+    else:
+        raise ValueError(f"num_classes must be 5 or 7, got {num_classes}")
 
 def getPaths(data_dir):
     # read image files from directory
@@ -67,32 +112,74 @@ def getPaths(data_dir):
     return sorted(list(set(image_paths)))
 
 
-def binaryMasksToRGB(RO, FV, HD, RI, WR):
+def binaryMasksToRGB(masks, num_classes=5):
     """
-    Convert 5 binary masks to a single RGB image using the SUIM color encoding:
-    RO (Robots) - Red (255, 0, 0)
-    FV (Fish/vertebrates) - Yellow (255, 255, 0)
-    HD (Human divers) - Blue (0, 0, 255)
-    RI (Reefs/invertebrates) - Magenta (255, 0, 255)
-    WR (Wrecks/ruins) - Cyan (0, 255, 255)
-    Background - Black (0, 0, 0)
+    Convert binary masks to a single RGB image using the SUIM color encoding
+    
+    Args:
+        masks: numpy array or torch tensor
+            - For 5 classes: (5, H, W) with order [RO, FV, HD, RI, WR]
+            - For 7 classes: (7, H, W) with order [HD, PF, WR, RO, RI, FV, SR]
+        num_classes: Number of classes (5 or 7)
+    
+    Returns:
+        RGB image as numpy array (H, W, 3) with uint8 values
+    
+    Color encoding:
+        5 classes:
+            RO (Robots) - Red (255, 0, 0)
+            FV (Fish/vertebrates) - Yellow (255, 255, 0)
+            HD (Human divers) - Blue (0, 0, 255)
+            RI (Reefs/invertebrates) - Magenta (255, 0, 255)
+            WR (Wrecks/ruins) - Cyan (0, 255, 255)
+        7 classes:
+            HD (Human divers) - Blue (0, 0, 255)
+            PF (Plants/sea-grass) - Green (0, 255, 0)
+            WR (Wrecks/ruins) - Cyan (0, 255, 255)
+            RO (Robots) - Red (255, 0, 0)
+            RI (Reefs/invertebrates) - Magenta (255, 0, 255)
+            FV (Fish/vertebrates) - Yellow (255, 255, 0)
+            SR (Sand/sea-floor) - White (255, 255, 255)
+        Background - Black (0, 0, 0)
     """
-    h, w = RO.shape
-    rgb_mask = np.zeros((h, w, 3), dtype=np.uint8)
+    # Convert to numpy if torch tensor
+    if hasattr(masks, 'cpu'):
+        masks = masks.cpu().numpy()
     
-    # Apply colors with priority (later ones override earlier ones where they overlap)
-    # RO - Red
-    rgb_mask[RO > 0] = [255, 0, 0]
-    # FV - Yellow
-    rgb_mask[FV > 0] = [255, 255, 0]
-    # HD - Blue
-    rgb_mask[HD > 0] = [0, 0, 255]
-    # RI - Magenta
-    rgb_mask[RI > 0] = [255, 0, 255]
-    # WR - Cyan
-    rgb_mask[WR > 0] = [0, 255, 255]
+    if num_classes == 5:
+        # Order: RO, FV, HD, RI, WR
+        RO, FV, HD, RI, WR = masks[0], masks[1], masks[2], masks[3], masks[4]
+        h, w = RO.shape
+        rgb_mask = np.zeros((h, w, 3), dtype=np.uint8)
+        
+        # Apply colors with priority (later ones override earlier ones where they overlap)
+        rgb_mask[RO > 0] = [255, 0, 0]      # Red
+        rgb_mask[FV > 0] = [255, 255, 0]    # Yellow
+        rgb_mask[HD > 0] = [0, 0, 255]      # Blue
+        rgb_mask[RI > 0] = [255, 0, 255]    # Magenta
+        rgb_mask[WR > 0] = [0, 255, 255]    # Cyan
+        
+        return rgb_mask
     
-    return rgb_mask
+    elif num_classes == 7:
+        # Order: HD, PF, WR, RO, RI, FV, SR
+        HD, PF, WR, RO, RI, FV, SR = masks[0], masks[1], masks[2], masks[3], masks[4], masks[5], masks[6]
+        h, w = HD.shape
+        rgb_mask = np.zeros((h, w, 3), dtype=np.uint8)
+        
+        # Apply colors with priority (later ones override earlier ones where they overlap)
+        rgb_mask[HD > 0] = [0, 0, 255]      # Blue
+        rgb_mask[PF > 0] = [0, 255, 0]      # Green
+        rgb_mask[WR > 0] = [0, 255, 255]    # Cyan
+        rgb_mask[RO > 0] = [255, 0, 0]      # Red
+        rgb_mask[RI > 0] = [255, 0, 255]    # Magenta
+        rgb_mask[FV > 0] = [255, 255, 0]    # Yellow
+        rgb_mask[SR > 0] = [255, 255, 255]  # White
+        
+        return rgb_mask
+    
+    else:
+        raise ValueError(f"num_classes must be 5 or 7, got {num_classes}")
 
 
 class SUIMDataset(Dataset):
@@ -100,7 +187,7 @@ class SUIMDataset(Dataset):
     PyTorch Dataset for SUIM with data augmentation
     """
     def __init__(self, train_dir, image_folder="images", mask_folder="masks", 
-                 target_size=(320, 256), augmentation=True, augmentation_params=None):
+                 target_size=(320, 256), augmentation=True, augmentation_params=None, num_classes=5):
         """
         Args:
             train_dir: Root directory containing image_folder and mask_folder
@@ -109,6 +196,9 @@ class SUIMDataset(Dataset):
             target_size: (width, height) tuple
             augmentation: Whether to apply data augmentation
             augmentation_params: Dict with augmentation parameters (rotation, shift, etc.)
+            num_classes: Number of classes to extract from masks (5 or 7)
+                - 5: RO, FV, HD, RI, WR (original SUIM-Net)
+                - 7: HD, PF, WR, RO, RI, FV, SR (all categories except background)
         """
         self.train_dir = train_dir
         self.image_dir = os.path.join(train_dir, image_folder)
@@ -118,6 +208,7 @@ class SUIMDataset(Dataset):
             self.mask_dir = None
         self.target_size = target_size                          # (width, height) para o qual as imagens vão ser cortadas
         self.augmentation = augmentation
+        self.num_classes = num_classes
         
         # Get all image paths
         self.image_paths = sorted(glob.glob(os.path.join(self.image_dir, '*.*')))
@@ -173,13 +264,13 @@ class SUIMDataset(Dataset):
             # Convert to tensors
             image = self.to_tensor(image)  # (3, H, W), values in [0, 1]
             
-            # Process mask: RGB -> 5 binary channels
+            # Process mask: RGB -> binary channels (5 or 7 depending on num_classes)
             mask_np = np.array(mask).astype(np.float32) / 255.0
             mask_np[mask_np > 0.5] = 1.0
             mask_np[mask_np <= 0.5] = 0.0
             
-            # Extract 5 categories
-            mask_tensor = getRobotFishHumanReefWrecks(mask_np)  # (5, H, W)
+            # Extract categories (5 or 7)
+            mask_tensor = getRobotFishHumanReefWrecks(mask_np, num_classes=self.num_classes)  # (num_classes, H, W)
             mask_tensor = torch.from_numpy(mask_tensor)
             
             return image, mask_tensor
@@ -247,7 +338,7 @@ class SUIMDataset(Dataset):
 
 def get_suim_dataloader(train_dir, batch_size=8, image_folder="images", mask_folder="masks",
                         target_size=(320, 256), augmentation=True, augmentation_params=None,
-                        num_workers=4, shuffle=True, validation=False, val_ratio=0.2, drop_last=False):
+                        num_workers=4, shuffle=True, validation=False, val_ratio=0.2, drop_last=False, num_classes=5):
     """
     Create PyTorch DataLoader for SUIM dataset
     
@@ -263,6 +354,7 @@ def get_suim_dataloader(train_dir, batch_size=8, image_folder="images", mask_fol
         shuffle: Whether to shuffle data
         validation: If True, split dataset into train/val and return both loaders
         val_ratio: Fraction of data to use for validation (default: 0.2 = 20%)
+        num_classes: Number of classes to extract from masks (5 or 7)
     
     Returns:
         DataLoader object, or (train_loader, val_loader) if validation=True
@@ -272,12 +364,14 @@ def get_suim_dataloader(train_dir, batch_size=8, image_folder="images", mask_fol
         # Create train dataset with augmentation
         train_dataset = SUIMDataset(train_dir, image_folder, mask_folder, 
                                     target_size, augmentation=augmentation, 
-                                    augmentation_params=augmentation_params)
+                                    augmentation_params=augmentation_params,
+                                    num_classes=num_classes)
         
         # Create validation dataset without augmentation
         val_dataset = SUIMDataset(train_dir, image_folder, mask_folder, 
                                   target_size, augmentation=False, 
-                                  augmentation_params=None)
+                                  augmentation_params=None,
+                                  num_classes=num_classes)
         
         # Split both datasets with same indices
         dataset_size = len(train_dataset)
@@ -309,7 +403,7 @@ def get_suim_dataloader(train_dir, batch_size=8, image_folder="images", mask_fol
     else:
         # Single dataset (original behavior)
         dataset = SUIMDataset(train_dir, image_folder, mask_folder, 
-                            target_size, augmentation, augmentation_params)
+                            target_size, augmentation, augmentation_params, num_classes=num_classes)
         dataloader = DataLoader(dataset, batch_size=batch_size, shuffle=shuffle,
                                num_workers=num_workers, pin_memory=True, drop_last=drop_last)
         return dataloader

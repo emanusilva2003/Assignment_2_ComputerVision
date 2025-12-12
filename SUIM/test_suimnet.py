@@ -20,7 +20,7 @@ from utils.data_utils import getPaths, binaryMasksToRGB
 test_dir = "SUIM/TEST/images/"
 
 ## sample and ckpt dir
-samples_dir = "SUIM/TEST/output/"
+samples_dir = "SUIM/TEST/output_keras_rsb/"
 RO_dir = samples_dir + "RO/"
 FB_dir = samples_dir + "FV/"
 WR_dir = samples_dir + "WR/"
@@ -36,7 +36,7 @@ if not exists(RI_dir): os.makedirs(RI_dir)
 if not exists(RGB_dir): os.makedirs(RGB_dir)
 
 ## input/output shapes
-base_ = 'VGG' # or 'RSB'
+base_ = 'RSB' # or 'RSB'
 if base_=='RSB':
     im_res_ = (320, 240, 3) 
     ckpt_name = "suimnet_rsb5.hdf5"
