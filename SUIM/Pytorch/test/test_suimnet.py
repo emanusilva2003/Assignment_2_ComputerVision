@@ -23,7 +23,7 @@ from utils.data_utils import SUIMDataset, binaryMasksToRGB
 test_dir = "SUIM/TEST/images/"
 ckpt_dir = "SUIM/Pytorch/ckpt_swin_7classes/"
 ## sample and ckpt dir
-samples_dir = "SUIM/Pytorch/ckpt_swin_7classes/Output/"
+samples_dir = "SUIM/Pytorch/ckpt_swin_7classes/Output2/"
     
 ## input/output shapes
 base_ = 'SWIN' # 'RSB', 'VGG', or 'SWIN'
@@ -35,7 +35,7 @@ if base_=='RSB':
     ckpt_name = "suimnet_rsb_epoch_70.pth"
 elif base_=='SWIN':
     im_res_ = (256, 256, 3)
-    ckpt_name = "suimnet_swin_best.pth"
+    ckpt_name = "suimnet_swin_best (2).pth"
 else: 
     im_res_ = (320, 256, 3)
     ckpt_name = "suimnet_vgg_best.pth"
